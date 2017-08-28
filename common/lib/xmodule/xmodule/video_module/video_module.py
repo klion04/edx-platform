@@ -41,7 +41,7 @@ from xmodule.x_module import XModule, module_attr
 from xmodule.xml_module import deserialize_field, is_pointer_tag, name_to_pathname
 
 from .bumper_utils import bumperize
-from .transcripts_utils import Transcript, VideoTranscriptsMixin, get_html5_ids
+from .transcripts_utils import Transcript, VideoTranscriptsMixin, get_html5_ids, get_video_ids_info
 from .video_handlers import VideoStudentViewHandlers, VideoStudioViewHandlers
 from .video_utils import create_youtube_string, format_xml_exception_message, get_poster, rewrite_video_url
 from .video_xfields import VideoFields
@@ -179,6 +179,18 @@ class VideoModule(VideoFields, VideoTranscriptsMixin, VideoStudentViewHandlers, 
                 track_url = self.track
             elif sub or other_lang:
                 track_url = self.runtime.handler_url(self, 'transcript', 'download').rstrip('/?')
+
+            # Check transcript's availability in edx-val
+            # TODO: Add check for feature flag.
+            if not track_url and edxval_api:
+                __, video_candidate_ids = get_video_ids_info(
+                    self.edx_video_id,
+                    self.youtube_id_1_0,
+                    self.html5_sources,
+                )
+                transcript = edxval_api.get_video_transcript(video_candidate_ids, self.transcript_language)
+                if transcript:
+                    track_url = self.runtime.handler_url(self, 'transcript', 'download').rstrip('/?')
 
         transcript_language = self.get_default_transcript_language(transcripts)
 
