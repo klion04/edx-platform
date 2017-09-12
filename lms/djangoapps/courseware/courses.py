@@ -441,6 +441,9 @@ def get_courses(user, org=None, filter_=None):
         settings.COURSE_CATALOG_VISIBILITY_PERMISSION
     )
 
+    print courses
+    for c in courses:
+        print '{}: {}'.format(c, has_access(user, permission_name, c))
     courses = [c for c in courses if has_access(user, permission_name, c)]
 
     return courses
