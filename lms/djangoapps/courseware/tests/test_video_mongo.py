@@ -1480,7 +1480,8 @@ class VideoDescriptorTest(TestCase, VideoDescriptorTestBase):
             self.descriptor.editable_metadata_fields['edx_video_id']
         )
 
-    def test_export_val_data(self):
+    @patch('xmodule.video_module.video_module.get_video_with_transcript_available')
+    def test_export_val_data(self, mock_get_video_with_transcript_available):
         self.descriptor.edx_video_id = 'test_edx_video_id'
         create_profile('mobile')
         create_video({
@@ -1495,6 +1496,7 @@ class VideoDescriptorTest(TestCase, VideoDescriptorTestBase):
                 'bitrate': 333,
             }],
         })
+        mock_get_video_with_transcript_available.return_value = (False, self.descriptor.edx_video_id)
 
         actual = self.descriptor.definition_to_xml(resource_fs=None)
         expected_str = """
@@ -1516,9 +1518,11 @@ class VideoDescriptorTest(TestCase, VideoDescriptorTestBase):
         expected = etree.XML(expected_str, parser=parser)
         self.assertXmlEqual(expected, actual)
 
-    def test_import_val_data(self):
+    @patch('xmodule.video_module.video_module.get_video_with_transcript_available')
+    def test_import_val_data(self, mock_get_video_with_transcript_available):
         create_profile('mobile')
         module_system = DummySystem(load_error_modules=True)
+        mock_get_video_with_transcript_available.return_value = (False, 'test_edx_video_id')
 
         xml_data = """
             <video edx_video_id="test_edx_video_id">
@@ -1529,7 +1533,7 @@ class VideoDescriptorTest(TestCase, VideoDescriptorTestBase):
         """
         id_generator = Mock()
         id_generator.target_course_id = "test_course_id"
-        video = VideoDescriptor.from_xml(xml_data, module_system, id_generator)
+        video = self.descriptor.from_xml(xml_data, module_system, id_generator)
         self.assertEqual(video.edx_video_id, 'test_edx_video_id')
         video_data = get_video_info(video.edx_video_id)
         self.assertEqual(video_data['client_video_id'], 'test_client_video_id')
@@ -1541,9 +1545,11 @@ class VideoDescriptorTest(TestCase, VideoDescriptorTestBase):
         self.assertEqual(video_data['encoded_videos'][0]['file_size'], 222)
         self.assertEqual(video_data['encoded_videos'][0]['bitrate'], 333)
 
-    def test_import_val_data_invalid(self):
+    @patch('xmodule.video_module.video_module.get_video_with_transcript_available')
+    def test_import_val_data_invalid(self, mock_get_video_with_transcript_available):
         create_profile('mobile')
         module_system = DummySystem(load_error_modules=True)
+        mock_get_video_with_transcript_available.return_value = (False, 'test_edx_video_id')
 
         # Negative file_size is invalid
         xml_data = """
