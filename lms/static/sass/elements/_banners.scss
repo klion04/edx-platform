@@ -74,6 +74,10 @@ $full-width-banner-margin: 20px;
             background-color: $state-info-bg;
             border-color: $state-info-border;
             box-shadow: none;
+            a, a:visited, .btn-link {
+                color: $state-info-text-link;
+                font-weight: bold;
+            }
         }
 
         &.alert-success {
