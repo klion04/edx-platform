@@ -138,6 +138,7 @@ def _assets_json(request, course_key):
 
     if request_options['requested_page'] > 0 and first_asset_to_display_index >= total_count:
         _update_options_to_requery_final_page(query_options, total_count)
+        current_page = query_options['current_page']
         first_asset_to_display_index = _get_first_asset_index(current_page, requested_page_size)
         assets, total_count = _get_assets_for_page(request, course_key, query_options)
 
@@ -311,7 +312,6 @@ def _get_assets_in_json_format(assets, course_key):
     return assets_in_json_format
 
 
-
 def update_course_run_asset(course_key, upload_file):
     filename = upload_file.name
     mime_type = upload_file.content_type
@@ -437,7 +437,8 @@ def _check_upload_file_size(file_metadata):
     if upload_file_size > maximum_file_size_in_bytes:
         error_message = _get_file_too_large_error_message(filename)
         return JsonResponse({'error': error_message}, status=413)
-
+    #else:
+    #    return None
 
 def _get_file_too_large_error_message(filename):
 
