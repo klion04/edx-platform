@@ -2119,6 +2119,9 @@ INSTALLED_APPS = [
     # Bulk Enrollment API
     'bulk_enroll',
 
+    # Entitlement API
+    'entitlements',
+
     # Student Identity Verification
     'lms.djangoapps.verify_student',
 
