@@ -371,13 +371,13 @@ class TestTranscriptDownloadDispatch(TestVideo):
         self.assertEqual(response.headers['Content-Disposition'], 'attachment; filename="塞.srt"')
 
     @patch('xmodule.video_module.video_handlers.VideoTranscriptEnabledFlag.feature_enabled', Mock(return_value=True))
-    @patch('xmodule.video_module.video_handlers.edxval_api.get_video_transcript')
+    @patch('xmodule.video_module.video_handlers.edxval_api.get_video_transcript_data')
     @patch('xmodule.video_module.VideoModule.get_transcript', Mock(side_effect=NotFoundError))
-    def test_download_fallback_transcript(self, mock_get_video_transcript):
+    def test_download_fallback_transcript(self, mock_get_video_transcript_data):
         """
         Verify val transcript is returned as a fallback if it is not found in the content store.
         """
-        mock_get_video_transcript.return_value = {
+        mock_get_video_transcript_data.return_value = {
             'content': json.dumps({
                 "start": [10],
                 "end": [100],
@@ -648,11 +648,11 @@ class TestTranscriptTranslationGetDispatch(TestVideo):
         with store.branch_setting(ModuleStoreEnum.Branch.draft_preferred, self.course.id):
             store.update_item(self.course, self.user.id)
 
-    @patch('xmodule.video_module.video_handlers.edxval_api.get_video_transcript')
+    @patch('xmodule.video_module.video_handlers.edxval_api.get_video_transcript_data')
     @patch('xmodule.video_module.video_handlers.VideoTranscriptEnabledFlag.feature_enabled', Mock(return_value=True))
     @patch('xmodule.video_module.VideoModule.translation', Mock(side_effect=NotFoundError))
     @patch('xmodule.video_module.VideoModule.get_static_transcript', Mock(return_value=Response(status=404)))
-    def test_translation_fallback_transcript(self, mock_get_video_transcript):
+    def test_translation_fallback_transcript(self, mock_get_video_transcript_data):
         """
         Verify that the val transcript is returned as a fallback,
         if it is not found in the content store.
@@ -665,7 +665,7 @@ class TestTranscriptTranslationGetDispatch(TestVideo):
             }),
             'file_name': 'edx.sjson'
         }
-        mock_get_video_transcript.return_value = transcript
+        mock_get_video_transcript_data.return_value = transcript
 
         # Make request to XModule transcript handler
         response = self.item.transcript(request=Request.blank('/translation/en'), dispatch='translation/en')

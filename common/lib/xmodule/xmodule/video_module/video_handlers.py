@@ -265,7 +265,7 @@ class VideoStudentViewHandlers(object):
                             youtube_id_1_0=self.youtube_id_1_0,
                             html5_sources=self.html5_sources,
                         )
-                        transcript = edxval_api.get_video_transcript(
+                        transcript = edxval_api.get_video_transcript_data(
                             video_ids=video_candidate_ids,
                             language_code=language,
                         )
@@ -315,7 +315,7 @@ class VideoStudentViewHandlers(object):
                         youtube_id_1_0=self.youtube_id_1_0,
                         html5_sources=self.html5_sources,
                     )
-                    transcript = edxval_api.get_video_transcript(
+                    transcript = edxval_api.get_video_transcript_data(
                         video_ids=video_candidate_ids,
                         language_code=lang,
                     )

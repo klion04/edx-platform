@@ -189,7 +189,7 @@ class VideoModule(VideoFields, VideoTranscriptsMixin, VideoStudentViewHandlers, 
                     self.youtube_id_1_0,
                     self.html5_sources,
                 )
-                transcript = edxval_api.get_video_transcript(video_candidate_ids, self.transcript_language)
+                transcript = edxval_api.get_video_transcript_data(video_candidate_ids, self.transcript_language)
                 if transcript:
                     track_url = self.runtime.handler_url(self, 'transcript', 'download').rstrip('/?')
 

@@ -184,7 +184,7 @@ def download_transcripts(request):
         if feature_enabled:
             # Look for transcripts in VAL first.
             __, video_candidate_ids = get_video_ids_info(item.edx_video_id, item.youtube_id_1_0, item.html5_sources)
-            transcript = edxval_api.get_video_transcript(video_ids=video_candidate_ids, language_code=u'en')
+            transcript = edxval_api.get_video_transcript_data(video_ids=video_candidate_ids, language_code=u'en')
 
             if transcript:
                 transcript_content = Transcript.convert(
@@ -310,7 +310,7 @@ def check_transcripts(request):
         feature_enabled = VideoTranscriptEnabledFlag.feature_enabled(course_id=item.location.course_key)
         if feature_enabled:
             __, video_candidate_ids = get_video_ids_info(item.edx_video_id, item.youtube_id_1_0, item.html5_sources)
-            video_transcript = edxval_api.get_video_transcript(video_ids=video_candidate_ids, language_code=u'en')
+            video_transcript = edxval_api.get_video_transcript_data(video_ids=video_candidate_ids, language_code=u'en')
             command = 'found' if video_transcript else command
 
     transcripts_presence.update({

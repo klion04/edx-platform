@@ -527,12 +527,12 @@ class TestDownloadTranscripts(BaseTranscripts):
         self.assertEqual(resp.status_code, 404)
 
     @patch('xmodule.video_module.video_handlers.VideoTranscriptEnabledFlag.feature_enabled', Mock(return_value=True))
-    @patch('contentstore.views.transcripts_ajax.edxval_api.get_video_transcript')
-    def test_download_fallback_transcript(self, mock_get_video_transcript):
+    @patch('contentstore.views.transcripts_ajax.edxval_api.get_video_transcript_data')
+    def test_download_fallback_transcript(self, mock_get_video_transcript_data):
         """
         Verify that the val transcript is returned if its not found in content-store.
         """
-        mock_get_video_transcript.return_value = {
+        mock_get_video_transcript_data.return_value = {
             'content': json.dumps({
                 "start": [10],
                 "end": [100],
@@ -827,7 +827,7 @@ class TestCheckTranscripts(BaseTranscripts):
     )
     @ddt.unpack
     @patch('xmodule.video_module.video_handlers.VideoTranscriptEnabledFlag.feature_enabled')
-    @patch('contentstore.views.transcripts_ajax.edxval_api.get_video_transcript', Mock(return_value=True))
+    @patch('contentstore.views.transcripts_ajax.edxval_api.get_video_transcript_data', Mock(return_value=True))
     def test_command_for_fallback_transcript(self, feature_enabled, expected_command, video_transcript_feature):
         """
         Verify the command if a transcript is not found in content-store but
