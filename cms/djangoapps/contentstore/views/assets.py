@@ -31,7 +31,7 @@ __all__ = ['assets_handler']
 
 # pylint: disable=unused-argument
 
-request_defaults = {
+REQUEST_DEFAULTS = {
     'page': 0,
     'page_size': 50,
     'sort': 'date_added',
@@ -87,7 +87,7 @@ def _get_request_response_format(request):
 
 def _check_request_response_format_is_json(request, response_format):
 
-        return response_format == 'json' or 'application/json' in request.META.get('HTTP_ACCEPT', 'application/json')
+    return response_format == 'json' or 'application/json' in request.META.get('HTTP_ACCEPT', 'application/json')
 
 
 def _asset_index(request, course_key):
@@ -119,6 +119,11 @@ def _assets_json(request, course_key):
     filter_parameters = None
 
     if (request_options['requested_asset_type']):
+        filters_are_valid = _check_filter_parameters_are_valid(request_options['requested_asset_type'])
+
+        if filters_are_valid is not None:
+            return filters_are_valid
+
         filter_parameters = _get_filter_parameters_for_mongo(request_options['requested_asset_type'])
 
     sort_type_and_direction = _get_sort_type_and_direction(request_options)
@@ -174,33 +179,81 @@ def _get_requested_attribute(request, attribute):
     return request.GET.get(attribute, request_defaults.get(attribute))
 
 
+def _check_filter_parameters_are_valid(requested_filter):
+
+    requested_file_types = _get_requested_file_types_from_requested_filter(requested_filter)
+    invalid_filters = []
+    for requested_file_type in requested_file_types:
+        # OTHER is not described in the settings file as a filter
+        all_valid_file_types = set(_get_files_and_upload_type_filters().keys())
+        all_valid_file_types.add("OTHER")
+        if requested_file_type not in all_valid_file_types:
+            invalid_filters.append(requested_file_type)
+
+    if len(invalid_filters) > 0:
+        error_message = {
+            "error_code": "invalid_asset_type_filter",
+            "developer_message": "The asset_type parameter to the request is invalid. "
+                                 "The {} filters are not described in the settings.FILES_AND_UPLOAD_TYPE_FILTERS dictionary.".format(invalid_filters)
+        }
+        return JsonResponse({'error': error_message}, status=400)
+
+
 def _get_filter_parameters_for_mongo(requested_filter):
 
-    if requested_filter == 'OTHER':
-        mongo_where_operator_parameters = _get_mongo_where_operator_parameters_for_other()
-    else:
-        mongo_where_operator_parameters = _get_mongo_where_operator_parameters_for_filters(requested_filter)
+    requested_file_types = _get_requested_file_types_from_requested_filter(requested_filter)
+    mongo_where_operator_parameters = _get_mongo_where_operator_parameters_for_filters(requested_file_types)
+
     return mongo_where_operator_parameters
 
 
-def _get_mongo_where_operator_parameters_for_other():
+def _get_mongo_where_operator_parameters_for_filters(requested_file_types):
 
-    requested_file_types = _get_files_and_upload_type_filters().keys()
-    file_extensions_for_requested_file_types = _get_extensions_for_file_types(requested_file_types)
-    javascript_expression_to_filter_extensions = _get_javascript_expressions_to_filter_extensions_with_operator(file_extensions_for_requested_file_types, "!=")
-    javascript_expressions_to_filter_extensions_in_mongo = _get_javascript_expressions_for_mongo_filter_with_separator(javascript_expression_to_filter_extensions, ' && ')
+    javascript_filters = []
 
-    return javascript_expressions_to_filter_extensions_in_mongo
+    for requested_file_type in requested_file_types:
+        if requested_file_type == "OTHER":
+            javascript_filters_for_file_types = _get_javascript_expressions_for_other_()
+            javascript_filters.append(javascript_filters_for_file_types)
+        else:
+            javascript_filters_for_file_types = _get_javascript_expressions_for_filter(requested_file_type)
+            javascript_filters.append(javascript_filters_for_file_types)
+
+    javascript_filters = _join_javascript_expressions_for_filters_with_separator(javascript_filters, "||")
 
 
-def _get_mongo_where_operator_parameters_for_filters(requested_filter):
+    return _format_javascript_filters_for_mongo_where(javascript_filters)
 
-    requested_file_types = _get_requested_file_types_from_request(requested_filter)
-    file_extensions_for_requested_file_types = _get_extensions_for_file_types(requested_file_types)
-    javascript_expressions_to_filter_extensions = _get_javascript_expressions_to_filter_extensions_with_operator(file_extensions_for_requested_file_types, "==")
-    javascript_expressions_to_filter_extensions_in_mongo = _get_javascript_expressions_for_mongo_filter_with_separator(javascript_expressions_to_filter_extensions, ' || ')
+def _format_javascript_filters_for_mongo_where(javascript_filters):
 
-    return javascript_expressions_to_filter_extensions_in_mongo
+    return {
+        "$where": javascript_filters,
+    }
+
+
+def _get_javascript_expressions_for_other_():
+
+    file_extensions_for_requested_file_types = _get_files_and_upload_type_filters().values()
+    file_extensions_for_requested_file_types_flattened = [extension for extensions in
+                                                          file_extensions_for_requested_file_types for extension in
+                                                          extensions]
+
+    javascript_expression_to_filter_extensions = _get_javascript_expressions_to_filter_extensions_with_operator(file_extensions_for_requested_file_types_flattened, "!=")
+    joined_javascript_expressions_to_filter_extensions = _join_javascript_expressions_for_filters_with_separator(
+        javascript_expression_to_filter_extensions, ' && ')
+
+    return joined_javascript_expressions_to_filter_extensions
+
+
+def _get_javascript_expressions_for_filter(requested_file_type):
+
+    file_extensions_for_requested_file_type = _get_extensions_for_file_type(requested_file_type)
+    javascript_expressions_to_filter_extensions = _get_javascript_expressions_to_filter_extensions_with_operator(
+        file_extensions_for_requested_file_type, "==")
+    joined_javascript_expressions_to_filter_extensions = _join_javascript_expressions_for_filters_with_separator(
+        javascript_expressions_to_filter_extensions, ' || ')
+
+    return joined_javascript_expressions_to_filter_extensions
 
 
 def _get_files_and_upload_type_filters():
@@ -208,20 +261,14 @@ def _get_files_and_upload_type_filters():
     return settings.FILES_AND_UPLOAD_TYPE_FILTERS
 
 
-def _get_requested_file_types_from_request(requested_filter):
+def _get_requested_file_types_from_requested_filter(requested_filter):
 
     return requested_filter.split(",")
 
 
-def _get_extensions_for_file_types(requested_file_types):
+def _get_extensions_for_file_type(requested_file_type):
 
-    file_extensions_for_file_types = []
-
-    for requested_file_type in requested_file_types:
-        file_extension_for_file_type = _get_files_and_upload_type_filters().get(requested_file_type)
-        file_extensions_for_file_types.extend(file_extension_for_file_type)
-
-    return file_extensions_for_file_types
+    return  _get_files_and_upload_type_filters().get(requested_file_type)
 
 
 def _get_javascript_expressions_to_filter_extensions_with_operator(file_extensions, operator):
@@ -230,11 +277,8 @@ def _get_javascript_expressions_to_filter_extensions_with_operator(file_extensio
         file_extension) for file_extension in file_extensions]
 
 
-def _get_javascript_expressions_for_mongo_filter_with_separator(javascript_expressions_for_mongo_filtering, separator):
-
-    return {
-        "$where": separator.join(javascript_expressions_for_mongo_filtering),
-    }
+def _join_javascript_expressions_for_filters_with_separator(javascript_expressions_for_filtering, separator):
+    return separator.join(javascript_expressions_for_filtering)
 
 
 def _get_sort_type_and_direction(request_options):
@@ -437,13 +481,11 @@ def _check_upload_file_size(file_metadata):
     if upload_file_size > maximum_file_size_in_bytes:
         error_message = _get_file_too_large_error_message(filename)
         return JsonResponse({'error': error_message}, status=413)
-    #else:
-    #    return None
+
 
 def _get_file_too_large_error_message(filename):
 
-    return
-    _(
+    return _(
         'File {filename} exceeds maximum size of '
         '{size_mb} MB. Please follow the instructions here '
         'to upload a file elsewhere and link to it instead: '
