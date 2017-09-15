@@ -5,16 +5,20 @@ export class CourseGoals {  // eslint-disable-line import/prefer-default-export
   constructor(options) {
     $('.goal-option').click((e) => {
       const goalKey = $(e.target).data().choice;
-      $.post({
+      $.ajax({
+        method: 'POST',
         url: options.setGoalUrl,
+        headers: { 'X-CSRFToken': $.cookie('csrftoken') },
         data: {
           goal_key: goalKey,
+          course_key: options.courseId,
+          user: options.username,
         },
         dataType: 'json',
-        success: (data) => {
+        success: () => {
           // LEARNER-2522 will address the success message
           // xss-lint: disable=javascript-jquery-html
-          $('.message-content').html(data.html);
+          $('.message-content').html('You have successfully set your goal');
         },
         error: () => {
           // LEARNER-2522 will address the error message
