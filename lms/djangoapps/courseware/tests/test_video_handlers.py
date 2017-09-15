@@ -370,6 +370,7 @@ class TestTranscriptDownloadDispatch(TestVideo):
         self.assertEqual(response.headers['Content-Type'], 'application/x-subrip; charset=utf-8')
         self.assertEqual(response.headers['Content-Disposition'], 'attachment; filename="塞.srt"')
 
+    @patch('xmodule.video_module.video_handlers.VideoTranscriptEnabledFlag.feature_enabled', Mock(return_value=True))
     @patch('xmodule.video_module.video_handlers.edxval_api.get_video_transcript')
     @patch('xmodule.video_module.VideoModule.get_transcript', Mock(side_effect=NotFoundError))
     def test_download_fallback_transcript(self, mock_get_video_transcript):
@@ -402,6 +403,19 @@ class TestTranscriptDownloadDispatch(TestVideo):
         self.assertEqual(response.text, expected_content)
         for attribute, value in expected_headers.iteritems():
             self.assertEqual(response.headers[attribute], value)
+
+    @patch('xmodule.video_module.video_handlers.VideoTranscriptEnabledFlag.feature_enabled', Mock(return_value=False))
+    @patch('xmodule.video_module.video_handlers.edxval_api.get_video_transcript')
+    @patch('xmodule.video_module.VideoModule.get_transcript', Mock(side_effect=NotFoundError))
+    def test_download_fallback_transcript_feature_disabled(self):
+        """
+        Verify val transcript if its feature is disabled.
+        """
+        # Make request to XModule transcript handler
+        request = Request.blank('/download')
+        response = self.item.transcript(request=request, dispatch='download')
+        # Assert the actual response
+        self.assertEqual(response.status_code, 404)
 
 
 @attr(shard=1)
@@ -636,6 +650,7 @@ class TestTranscriptTranslationGetDispatch(TestVideo):
             store.update_item(self.course, self.user.id)
 
     @patch('xmodule.video_module.video_handlers.edxval_api.get_video_transcript')
+    @patch('xmodule.video_module.video_handlers.VideoTranscriptEnabledFlag.feature_enabled', Mock(return_value=True))
     @patch('xmodule.video_module.VideoModule.translation', Mock(side_effect=NotFoundError))
     @patch('xmodule.video_module.VideoModule.get_static_transcript', Mock(return_value=Response(status=404)))
     def test_translation_fallback_transcript(self, mock_get_video_transcript):
@@ -667,6 +682,19 @@ class TestTranscriptTranslationGetDispatch(TestVideo):
         self.assertEqual(response.text, transcript['content'])
         for attribute, value in expected_headers.iteritems():
             self.assertEqual(response.headers[attribute], value)
+
+    @patch('xmodule.video_module.video_handlers.edxval_api.get_video_transcript')
+    @patch('xmodule.video_module.video_handlers.VideoTranscriptEnabledFlag.feature_enabled', Mock(return_value=False))
+    @patch('xmodule.video_module.VideoModule.translation', Mock(side_effect=NotFoundError))
+    @patch('xmodule.video_module.VideoModule.get_static_transcript', Mock(return_value=Response(status=404)))
+    def test_translation_fallback_transcript_feature_disabled(self):
+        """
+        Verify that val transcript is not returned when its feature is disabled.
+        """
+        # Make request to XModule transcript handler
+        response = self.item.transcript(request=Request.blank('/translation/en'), dispatch='translation/en')
+        # Assert the actual response
+        self.assertEqual(response.status_code, 404)
 
 
 @attr(shard=1)

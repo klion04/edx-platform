@@ -1,6 +1,7 @@
 """Tests for items views."""
 
 import copy
+import ddt
 import json
 import os
 import tempfile
@@ -525,6 +526,7 @@ class TestDownloadTranscripts(BaseTranscripts):
 
         self.assertEqual(resp.status_code, 404)
 
+    @patch('xmodule.video_module.video_handlers.VideoTranscriptEnabledFlag.feature_enabled', Mock(return_value=True))
     @patch('contentstore.views.transcripts_ajax.edxval_api.get_video_transcript')
     def test_download_fallback_transcript(self, mock_get_video_transcript):
         """
@@ -564,7 +566,28 @@ class TestDownloadTranscripts(BaseTranscripts):
         for attribute, value in expected_headers.iteritems():
             self.assertEqual(response.get(attribute), value)
 
+    @patch('xmodule.video_module.video_handlers.VideoTranscriptEnabledFlag.feature_enabled', Mock(return_value=False))
+    @patch('contentstore.views.transcripts_ajax.edxval_api.get_video_transcript')
+    def test_download_fallback_transcript_feature_disabled(self, mock_get_video_transcript):
+        """
+        Verify the transcript download when feature is disabled.
+        """
+        self.item.data = textwrap.dedent("""
+            <video youtube="" sub="">
+                <source src="http://www.quirksmode.org/html5/videos/big_buck_bunny.mp4"/>
+                <source src="http://www.quirksmode.org/html5/videos/big_buck_bunny.webm"/>
+                <source src="http://www.quirksmode.org/html5/videos/big_buck_bunny.ogv"/>
+            </video>
+        """)
+        modulestore().update_item(self.item, self.user.id)
 
+        download_transcripts_url = reverse('download_transcripts')
+        response = self.client.get(download_transcripts_url, {'locator': self.video_usage_key})
+        # Assert the actual response
+        self.assertEqual(response.status_code, 404)
+
+
+@ddt.ddt
 class TestCheckTranscripts(BaseTranscripts):
     """
     Tests for '/transcripts/check' url.
@@ -799,12 +822,19 @@ class TestCheckTranscripts(BaseTranscripts):
         self.assertEqual(resp.status_code, 400)
         self.assertEqual(json.loads(resp.content).get('status'), 'Transcripts are supported only for "video" modules.')
 
+    @ddt.data(
+        (True, 'found'),
+        (False, 'not_found')
+    )
+    @ddt.unpack
+    @patch('xmodule.video_module.video_handlers.VideoTranscriptEnabledFlag.feature_enabled')
     @patch('contentstore.views.transcripts_ajax.edxval_api.get_video_transcript', Mock(return_value=True))
-    def test_command_for_fallback_transcript(self):
+    def test_command_for_fallback_transcript(self, feature_enabled, expected_command, video_transcript_feature):
         """
         Verify the command if a transcript is not found in content-store but
         its there in edx-val.
         """
+        video_transcript_feature.return_value = feature_enabled
         self.item.data = textwrap.dedent("""
             <video youtube="" sub="">
                 <source src="http://www.quirksmode.org/html5/videos/big_buck_bunny.mp4"/>
@@ -836,7 +866,7 @@ class TestCheckTranscripts(BaseTranscripts):
                 u'youtube_local': False,
                 u'is_youtube_mode': False,
                 u'youtube_server': False,
-                u'command': u'found',
+                u'command': expected_command,
                 u'current_item_subs': None,
                 u'youtube_diff': True,
                 u'html5_local': [],

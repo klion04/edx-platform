@@ -19,6 +19,7 @@ from django.utils.translation import ugettext as _
 from edxval import api as edxval_api
 from opaque_keys import InvalidKeyError
 from opaque_keys.edx.keys import UsageKey
+from openedx.core.djangoapps.video_config.models import VideoTranscriptEnabledFlag
 
 from student.auth import has_course_author_access
 from util.json_request import JsonResponse
@@ -178,21 +179,24 @@ def download_transcripts(request):
         return response
     except NotFoundError:
         log.debug("Can't find content in storage for %s subs", subs_id)
-        # Look for transcripts in VAL first.
-        __, video_candidate_ids = get_video_ids_info(item.edx_video_id, item.youtube_id_1_0, item.html5_sources)
-        transcript = edxval_api.get_video_transcript(video_ids=video_candidate_ids, language_code=u'en')
+        # Try searching in VAL for the transcript as a last resort if video transcripts feature is enabled.
+        feature_enabled = VideoTranscriptEnabledFlag.feature_enabled(course_id=item.location.course_key)
+        if feature_enabled:
+            # Look for transcripts in VAL first.
+            __, video_candidate_ids = get_video_ids_info(item.edx_video_id, item.youtube_id_1_0, item.html5_sources)
+            transcript = edxval_api.get_video_transcript(video_ids=video_candidate_ids, language_code=u'en')
 
-        if transcript:
-            transcript_content = Transcript.convert(
-                transcript['content'],
-                input_format='sjson',
-                output_format='srt'
-            )
-            # Construct an HTTP response
-            filename = transcript['file_name'].split('.')[0].encode('utf8')
-            response = HttpResponse(transcript_content, content_type='application/x-subrip; charset=utf-8')
-            response['Content-Disposition'] = 'attachment; filename="{filename}.srt"'.format(filename=filename)
-            return response
+            if transcript:
+                transcript_content = Transcript.convert(
+                    transcript['content'],
+                    input_format='sjson',
+                    output_format='srt'
+                )
+                # Construct an HTTP response
+                filename = transcript['file_name'].split('.')[0].encode('utf8')
+                response = HttpResponse(transcript_content, content_type='application/x-subrip; charset=utf-8')
+                response['Content-Disposition'] = 'attachment; filename="{filename}.srt"'.format(filename=filename)
+                return response
 
         raise Http404
 
@@ -301,13 +305,13 @@ def check_transcripts(request):
             transcripts_presence['html5_equal'] = json.loads(html5_subs[0]) == json.loads(html5_subs[1])
 
     command, subs_to_use = _transcripts_logic(transcripts_presence, videos)
-
-    # Try searching in VAL for the transcript as a last resort.
     if command == 'not_found':
-        __, video_candidate_ids = get_video_ids_info(item.edx_video_id, item.youtube_id_1_0, item.html5_sources)
-        video_transcript = edxval_api.get_video_transcript(video_ids=video_candidate_ids, language_code=u'en')
-        if video_transcript:
-            command = 'found'
+        # Try searching in VAL for the transcript as a last resort if video transcripts feature is enabled.
+        feature_enabled = VideoTranscriptEnabledFlag.feature_enabled(course_id=item.location.course_key)
+        if feature_enabled:
+            __, video_candidate_ids = get_video_ids_info(item.edx_video_id, item.youtube_id_1_0, item.html5_sources)
+            video_transcript = edxval_api.get_video_transcript(video_ids=video_candidate_ids, language_code=u'en')
+            command = 'found' if video_transcript else command
 
     transcripts_presence.update({
         'command': command,

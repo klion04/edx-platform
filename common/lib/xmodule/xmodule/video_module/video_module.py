@@ -24,7 +24,7 @@ from pkg_resources import resource_string
 from django.conf import settings
 from lxml import etree
 from opaque_keys.edx.locator import AssetLocator
-from openedx.core.djangoapps.video_config.models import HLSPlaybackEnabledFlag
+from openedx.core.djangoapps.video_config.models import HLSPlaybackEnabledFlag, VideoTranscriptEnabledFlag
 from openedx.core.lib.cache_utils import memoize_in_request_cache
 from openedx.core.lib.license import LicenseMixin
 from xblock.core import XBlock
@@ -180,9 +180,10 @@ class VideoModule(VideoFields, VideoTranscriptsMixin, VideoStudentViewHandlers, 
             elif sub or other_lang:
                 track_url = self.runtime.handler_url(self, 'transcript', 'download').rstrip('/?')
 
-            # Check transcript's availability in edx-val
-            # TODO: Add check for feature flag.
-            if not track_url and edxval_api:
+            # Check transcript's availability in edx-val only
+            # if the corresponding feature is enabled for this course
+            feature_enabled = VideoTranscriptEnabledFlag.feature_enabled(course_id=self.course_id)
+            if not track_url and feature_enabled and edxval_api:
                 __, video_candidate_ids = get_video_ids_info(
                     self.edx_video_id,
                     self.youtube_id_1_0,
