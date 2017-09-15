@@ -9,7 +9,6 @@ from datetime import datetime
 from course_modes.models import CourseMode
 from courseware.courses import get_course_with_access
 from django.contrib import auth
-from django.core.urlresolvers import reverse
 from django.conf import settings
 from django.template.loader import render_to_string
 from django.utils.http import urlquote_plus
@@ -18,10 +17,10 @@ from django.utils.translation import get_language, to_locale
 from django.utils.translation import ugettext as _
 from openedx.core.djangolib.markup import Text, HTML
 from opaque_keys.edx.keys import CourseKey
+from rest_framework.reverse import reverse
 from web_fragments.fragment import Fragment
 
-from course_goals.views import CourseGoalOption, get_goal_text
-from course_goals.api import get_course_goal
+from course_goals.api import get_course_goal, CourseGoalOption, get_goal_text
 from openedx.core.djangoapps.plugin_api.views import EdxFragmentView
 from openedx.features.course_experience import CourseHomeMessages
 from student.models import CourseEnrollment
@@ -70,12 +69,7 @@ class CourseHomeMessageFragmentView(EdxFragmentView):
         course_home_messages = list(CourseHomeMessages.user_messages(request))
 
         # Pass in the url used to set a course goal
-        goal_api_url = reverse(
-            'course_goals:set_course_goal',
-            kwargs={
-                'course_id': course_id,
-            }
-        )
+        goal_api_url = reverse('course_goal:course_goal_api:course_goal_base-list', request=request)
 
         # Grab the logo
         image_src = "course_experience/images/home_message_author.png"
@@ -84,6 +78,7 @@ class CourseHomeMessageFragmentView(EdxFragmentView):
             'course_home_messages': course_home_messages,
             'goal_api_url': goal_api_url,
             'image_src': image_src,
+            'course_id': course_id,
         }
 
         html = render_to_string('course_experience/course-messages-fragment.html', context)

@@ -22,4 +22,8 @@ class Migration(migrations.Migration):
                 ('user', models.ForeignKey(to=settings.AUTH_USER_MODEL)),
             ],
         ),
+        migrations.AlterUniqueTogether(
+            name='coursegoal',
+            unique_together=set([('user', 'course_key')]),
+        ),
     ]
