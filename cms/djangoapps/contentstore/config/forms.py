@@ -5,7 +5,7 @@ import logging
 
 from django import forms
 
-from cms.djangoapps.contentstore.config.models import CourseNewAssetsPageFlag
+from contentstore.config.models import CourseNewAssetsPageFlag
 
 from opaque_keys import InvalidKeyError
 from xmodule.modulestore.django import modulestore
@@ -18,7 +18,7 @@ class CourseNewAssetsPageAdminForm(forms.ModelForm):
     """Input form for new asset page enablment, allowing us to verify user input."""
 
     class Meta(object):
-        model = CourseNewAssetsFlag
+        model = CourseNewAssetsPageFlag
         fields = '__all__'
 
     def clean_course_id(self):

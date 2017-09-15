@@ -1,10 +1,10 @@
 """
 Models for configuration of the feature flags
-controlling persistent grades.
+controlling the new assets page.
 """
 from config_models.models import ConfigurationModel
 from django.db.models import BooleanField
-from xmodule_django.models import CourseKeyField
+from openedx.core.djangoapps.xmodule_django.models import CourseKeyField
 
 
 class NewAssetsPageFlag(ConfigurationModel):
