@@ -250,8 +250,14 @@ def _update_course_context(request, context, course, course_key, platform_name):
                                                               '{partner_short_name}.').format(
             partner_short_name=context['organization_short_name'],
             platform_name=platform_name)
+<<<<<<< HEAD
     # If language specific templates are enabled for the course, add course_run specific information to the context
     if CertificateGenerationCourseSetting.is_language_specific_templates_enabled_for_course(course_key):
+=======
+
+    # If language specific templates are enabled for the course, add course_run specific information to the context
+    if CertificateGenerationCourseSetting.is_language_specific_templates_enabled_for_course(course_key):
+>>>>>>> 66f81a5796... added check for feature flag
         fields = ['start', 'end', 'max_effort', 'language']
         course_run_data = get_course_run_details(course_key, fields)
         context.update(course_run_data)
