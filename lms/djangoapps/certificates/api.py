@@ -27,7 +27,7 @@ from certificates.queue import XQueueCertInterface
 from eventtracking import tracker
 from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
 from openedx.core.djangoapps.xmodule_django.models import CourseKeyField
-from util.organizations_helpers import get_course_organizations
+from util.organizations_helpers import get_course_organization_id
 from xmodule.modulestore.django import modulestore
 
 log = logging.getLogger("edx.certificate")
@@ -484,49 +484,38 @@ def get_active_web_certificate(course, is_preview_mode=None):
     return None
 
 
-def get_certificate_template(course_key, mode, language):  # pylint: disable=unused-argument
+def get_certificate_template(course_key, mode, language):
     """
     Retrieves the custom certificate template based on course_key, mode, and language.
     """
-    org_id, template = None, None
     # fetch organization of the course
-    course_organization = get_course_organizations(course_key)
-    if course_organization:
-        org_id = course_organization[0]['id']
+    org_id = get_course_organization_id(course_key)
 
-    if org_id and mode:
-        template = CertificateTemplate.objects.filter(
-            organization_id=org_id,
-            course_key=course_key,
-            mode=mode,
-            is_active=True
-        )
-    # if don't template find by org and mode
-    if not template and org_id and mode:
-        template = CertificateTemplate.objects.filter(
-            organization_id=org_id,
-            course_key=CourseKeyField.Empty,
-            mode=mode,
-            is_active=True
-        )
-    # if don't template find by only org
-    if not template and org_id:
-        template = CertificateTemplate.objects.filter(
-            organization_id=org_id,
-            course_key=CourseKeyField.Empty,
-            mode=None,
-            is_active=True
-        )
-    # if we still don't template find by only course mode
-    if not template and mode:
-        template = CertificateTemplate.objects.filter(
-            organization_id=None,
-            course_key=CourseKeyField.Empty,
-            mode=mode,
-            is_active=True
-        )
+    # prepare template sets.
+    active_templates = CertificateTemplate.objects.filter(is_active=True)
+    org_templates = active_templates.filter(organization_id=org_id)
+    mode_templates = active_templates.filter(mode=mode)
+    org_and_mode_templates = active_templates.filter(organization_id=org_id, mode=mode,)
+    key_org_and_mode_templates = org_and_mode_templates.filter(course_key=course_key)
 
-    return template[0].template if template else None
+    # Create list for easy operation, with template sets ordered by priority to return 
+    # e.g. a key_org_and_mode_templates should be returned before an org_and_mode_template
+    template_sets = [key_org_and_mode_templates, org_and_mode_templates, org_templates, mode_templates]
+    
+    for template_set in template_sets:
+        template_set = check_for_language_specific_template(template_set, language)
+        if template_set:
+            return template_set[0].template
+
+
+def check_for_language_specific_template(templates, language):
+    """
+    Returns the template that matches the passed in language
+
+    Returns the default templates if language is None or no templates match the language
+    """
+    language_templates = templates.filter(language=language) 
+    return language_templates if language_templates else templates.filter(language=None)
 
 
 def emit_certificate_event(event_name, user, course_id, course=None, event_data=None):

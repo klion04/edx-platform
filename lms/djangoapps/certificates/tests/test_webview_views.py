@@ -18,6 +18,7 @@ from nose.plugins.attrib import attr
 
 from certificates.api import get_certificate_url
 from certificates.models import (
+    CertificateGenerationCourseSetting,
     CertificateHtmlViewConfiguration,
     CertificateSocialNetworks,
     CertificateStatuses,
@@ -147,7 +148,7 @@ class CommonCertificatesTestCase(ModuleStoreTestCase):
         self.course.save()
         self.store.update_item(self.course, self.user.id)
 
-    def _create_custom_template(self, org_id=None, mode=None, course_key=None):
+    def _create_custom_template(self, org_id=None, mode=None, course_key=None, language=None):
         """
         Creates a custom certificate template entry in DB.
         """
@@ -170,7 +171,8 @@ class CommonCertificatesTestCase(ModuleStoreTestCase):
             organization_id=org_id,
             course_key=course_key,
             mode=mode,
-            is_active=True
+            is_active=True,
+            language=language
         )
         template.save()
 
@@ -899,11 +901,8 @@ class CertificatesViewsTests(CommonCertificatesTestCase):
             course_id=unicode(self.course.id)
         )
 
-        with patch('certificates.api.get_course_organizations') as mock_get_orgs:
-            mock_get_orgs.side_effect = [
-                [{"id": 1, "name": "organization name"}],
-                [{"id": 2, "name": "organization name 2"}],
-            ]
+        with patch('certificates.api.get_course_organization_id') as mock_get_org_id:
+            mock_get_org_id.side_effect = [1, 2]
             response = self.client.get(test_url)
             self.assertEqual(response.status_code, 200)
             self.assertContains(response, 'lang: fr')
@@ -912,6 +911,34 @@ class CertificatesViewsTests(CommonCertificatesTestCase):
             response = self.client.get(test_url)
             self.assertEqual(response.status_code, 200)
             self.assertContains(response, 'lang: fr')
+            self.assertContains(response, 'course name: course_title_0')
+
+    @override_settings(FEATURES=FEATURES_WITH_CUSTOM_CERTS_ENABLED)
+    @override_settings(LANGUAGE_CODE='es')
+    @patch('certificates.views.webview.get_course_run_details')
+    def test_certificate_custom_template_with_org_mode_course_language(self, mock_get_course_run_details):
+        """
+        Tests custom template search and rendering.
+        This test should check template matching when org={org}, course={course}, mode={mode}, language = {language}
+        """
+
+        mock_get_course_run_details.return_value = {'language': 'es'}
+        CertificateGenerationCourseSetting.set_language_specific_templates_enabled_for_course(self.course.id, True)
+        self._add_course_certificates(count=2, signatory_count=1)
+
+        self._create_custom_template(org_id=1, mode='honor', course_key=unicode(self.course.id), language=None)
+        self._create_custom_template(org_id=1, mode='honor', course_key=unicode(self.course.id), language='es')
+        
+        test_url = get_certificate_url(
+            user_id=self.user.id,
+            course_id=unicode(self.course.id)
+        )
+
+        with patch('certificates.api.get_course_organization_id') as mock_get_org_id:
+            mock_get_org_id.side_effect = [1]
+            response = self.client.get(test_url)
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, 'lang: es')
             self.assertContains(response, 'course name: course_title_0')
 
     @override_settings(FEATURES=FEATURES_WITH_CUSTOM_CERTS_ENABLED)
@@ -935,10 +962,8 @@ class CertificatesViewsTests(CommonCertificatesTestCase):
             course_id=unicode(self.course.id)
         )
 
-        with patch('certificates.api.get_course_organizations') as mock_get_orgs:
-            mock_get_orgs.side_effect = [
-                [{"id": 1, "name": "organization name"}],
-            ]
+        with patch('certificates.api.get_course_organization_id') as mock_get_org_id:
+            mock_get_org_id.side_effect = [1]
             response = self.client.get(test_url)
             self.assertEqual(response.status_code, 200)
             self.assertContains(response, 'course name: course_title_0')
@@ -960,10 +985,8 @@ class CertificatesViewsTests(CommonCertificatesTestCase):
             course_id=unicode(self.course.id)
         )
 
-        with patch('certificates.api.get_course_organizations') as mock_get_orgs:
-            mock_get_orgs.side_effect = [
-                [{"id": 2, "name": "organization name 2"}],
-            ]
+        with patch('certificates.api.get_course_organization_id') as mock_get_org_id:
+            mock_get_org_id.side_effect = [2]
             response = self.client.get(test_url)
             self.assertEqual(response.status_code, 200)
 
@@ -983,8 +1006,8 @@ class CertificatesViewsTests(CommonCertificatesTestCase):
             course_id=unicode(self.course.id)
         )
 
-        with patch('certificates.api.get_course_organizations') as mock_get_orgs:
-            mock_get_orgs.return_value = []
+        with patch('certificates.api.get_course_organization_id') as mock_get_org_id:
+            mock_get_org_id.return_value = None
             response = self.client.get(test_url)
             self.assertEqual(response.status_code, 200)
             self.assertContains(response, 'mode: {}'.format(mode))
@@ -1013,8 +1036,8 @@ class CertificatesViewsTests(CommonCertificatesTestCase):
             }):
                 with patch('django.http.HttpRequest.build_absolute_uri') as mock_abs_uri:
                     mock_abs_uri.return_value = '='.join(['http://localhost/?param', u'é'])
-                    with patch('certificates.api.get_course_organizations') as mock_get_orgs:
-                        mock_get_orgs.return_value = []
+                    with patch('certificates.api.get_course_organization_id') as mock_get_org_id:
+                        mock_get_org_id.return_value = None
                         response = self.client.get(test_url)
                         self.assertEqual(response.status_code, 200)
                         if custom_certs_enabled:
@@ -1038,8 +1061,8 @@ class CertificatesViewsTests(CommonCertificatesTestCase):
         )
 
         # render certificate without template asset
-        with patch('certificates.api.get_course_organizations') as mock_get_orgs:
-            mock_get_orgs.return_value = []
+        with patch('certificates.api.get_course_organization_id') as mock_get_org_id:
+            mock_get_org_id.return_value = None
             response = self.client.get(test_url)
             self.assertContains(response, '<img class="custom-logo" src="" />')
 
@@ -1051,8 +1074,8 @@ class CertificatesViewsTests(CommonCertificatesTestCase):
         template_asset.save()
 
         # render certificate with template asset
-        with patch('certificates.api.get_course_organizations') as mock_get_orgs:
-            mock_get_orgs.return_value = []
+        with patch('certificates.api.get_course_organization_id') as mock_get_org_id:
+            mock_get_org_id.return_value = None
             response = self.client.get(test_url)
             self.assertContains(
                 response, '<img class="custom-logo" src="{}certificate_template_assets/32/test_logo.png" />'.format(
