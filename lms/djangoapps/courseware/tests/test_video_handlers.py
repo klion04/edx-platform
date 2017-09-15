@@ -405,7 +405,6 @@ class TestTranscriptDownloadDispatch(TestVideo):
             self.assertEqual(response.headers[attribute], value)
 
     @patch('xmodule.video_module.video_handlers.VideoTranscriptEnabledFlag.feature_enabled', Mock(return_value=False))
-    @patch('xmodule.video_module.video_handlers.edxval_api.get_video_transcript')
     @patch('xmodule.video_module.VideoModule.get_transcript', Mock(side_effect=NotFoundError))
     def test_download_fallback_transcript_feature_disabled(self):
         """
@@ -683,7 +682,6 @@ class TestTranscriptTranslationGetDispatch(TestVideo):
         for attribute, value in expected_headers.iteritems():
             self.assertEqual(response.headers[attribute], value)
 
-    @patch('xmodule.video_module.video_handlers.edxval_api.get_video_transcript')
     @patch('xmodule.video_module.video_handlers.VideoTranscriptEnabledFlag.feature_enabled', Mock(return_value=False))
     @patch('xmodule.video_module.VideoModule.translation', Mock(side_effect=NotFoundError))
     @patch('xmodule.video_module.VideoModule.get_static_transcript', Mock(return_value=Response(status=404)))

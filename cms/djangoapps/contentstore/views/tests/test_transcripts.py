@@ -567,8 +567,7 @@ class TestDownloadTranscripts(BaseTranscripts):
             self.assertEqual(response.get(attribute), value)
 
     @patch('xmodule.video_module.video_handlers.VideoTranscriptEnabledFlag.feature_enabled', Mock(return_value=False))
-    @patch('contentstore.views.transcripts_ajax.edxval_api.get_video_transcript')
-    def test_download_fallback_transcript_feature_disabled(self, mock_get_video_transcript):
+    def test_download_fallback_transcript_feature_disabled(self):
         """
         Verify the transcript download when feature is disabled.
         """
