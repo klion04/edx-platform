@@ -78,12 +78,10 @@ def assets_handler(request, course_key_string=None, asset_key_string=None):
 
 
 def _get_request_response_format(request):
-
     return request.GET.get('format') or request.POST.get('format') or 'html'
 
 
 def _check_request_response_format_is_json(request, response_format):
-
     return response_format == 'json' or 'application/json' in request.META.get('HTTP_ACCEPT', 'application/json')
 
 
@@ -115,10 +113,10 @@ def _assets_json(request, course_key):
     filter_parameters = None
 
     if (request_options['requested_asset_type']):
-        filters_are_valid = _check_filter_parameters_are_valid(request_options['requested_asset_type'])
+        filters_are_invalid_error = _get_error_if_invalid_parameters(request_options['requested_asset_type'])
 
-        if filters_are_valid is not None:
-            return filters_are_valid
+        if filters_are_invalid_error is not None:
+            return filters_are_invalid_error
 
         filter_parameters = _get_filter_parameters_for_mongo(request_options['requested_asset_type'])
 
@@ -160,7 +158,6 @@ def _assets_json(request, course_key):
 
 
 def _parse_request_to_dictionary(request):
-
     return {
         'requested_page': int(_get_requested_attribute(request, 'page')),
         'requested_page_size': int(_get_requested_attribute(request, 'page_size')),
@@ -171,12 +168,10 @@ def _parse_request_to_dictionary(request):
 
 
 def _get_requested_attribute(request, attribute):
-
     return request.GET.get(attribute, REQUEST_DEFAULTS.get(attribute))
 
 
-def _check_filter_parameters_are_valid(requested_filter):
-
+def _get_error_if_invalid_parameters(requested_filter):
     requested_file_types = _get_requested_file_types_from_requested_filter(requested_filter)
     invalid_filters = []
     for requested_file_type in requested_file_types:
@@ -191,13 +186,12 @@ def _check_filter_parameters_are_valid(requested_filter):
             "error_code": "invalid_asset_type_filter",
             "developer_message": "The asset_type parameter to the request is invalid. "
                                  "The {} filters are not described in the settings.FILES_AND_UPLOAD_TYPE_FILTERS dictionary.".format(
-                    invalid_filters)
+                invalid_filters)
         }
         return JsonResponse({'error': error_message}, status=400)
 
 
 def _get_filter_parameters_for_mongo(requested_filter):
-
     requested_file_types = _get_requested_file_types_from_requested_filter(requested_filter)
     mongo_where_operator_parameters = _get_mongo_where_operator_parameters_for_filters(requested_file_types)
 
@@ -205,7 +199,6 @@ def _get_filter_parameters_for_mongo(requested_filter):
 
 
 def _get_mongo_where_operator_parameters_for_filters(requested_file_types):
-
     javascript_filters = []
 
     for requested_file_type in requested_file_types:
@@ -220,15 +213,14 @@ def _get_mongo_where_operator_parameters_for_filters(requested_file_types):
 
     return _format_javascript_filters_for_mongo_where(javascript_filters)
 
-def _format_javascript_filters_for_mongo_where(javascript_filters):
 
+def _format_javascript_filters_for_mongo_where(javascript_filters):
     return {
         "$where": javascript_filters,
     }
 
 
 def _get_javascript_expressions_for_other_():
-
     file_extensions_for_requested_file_types = _get_files_and_upload_type_filters().values()
     file_extensions_for_requested_file_types_flattened = [extension for extensions in
                                                           file_extensions_for_requested_file_types for extension in
@@ -243,7 +235,6 @@ def _get_javascript_expressions_for_other_():
 
 
 def _get_javascript_expressions_for_filter(requested_file_type):
-
     file_extensions_for_requested_file_type = _get_extensions_for_file_type(requested_file_type)
     javascript_expressions_to_filter_extensions = _get_javascript_expressions_to_filter_extensions_with_operator(
         file_extensions_for_requested_file_type, "==")
@@ -254,22 +245,18 @@ def _get_javascript_expressions_for_filter(requested_file_type):
 
 
 def _get_files_and_upload_type_filters():
-
     return settings.FILES_AND_UPLOAD_TYPE_FILTERS
 
 
 def _get_requested_file_types_from_requested_filter(requested_filter):
-
     return requested_filter.split(",")
 
 
 def _get_extensions_for_file_type(requested_file_type):
-
-    return  _get_files_and_upload_type_filters().get(requested_file_type)
+    return _get_files_and_upload_type_filters().get(requested_file_type)
 
 
 def _get_javascript_expressions_to_filter_extensions_with_operator(file_extensions, operator):
-
     return ["JSON.stringify(this.contentType).toUpperCase() " + operator + " JSON.stringify('{}').toUpperCase()".format(
         file_extension) for file_extension in file_extensions]
 
@@ -279,14 +266,12 @@ def _join_javascript_expressions_for_filters_with_separator(javascript_expressio
 
 
 def _get_sort_type_and_direction(request_options):
-
     sort_type = _get_mongo_sort_from_requested_sort(request_options['requested_sort'])
     sort_direction = _get_sort_direction_from_requested_sort(request_options['requested_sort_direction'])
     return [(sort_type, sort_direction)]
 
 
 def _get_mongo_sort_from_requested_sort(requested_sort):
-
     if requested_sort == 'date_added':
         sort = 'uploadDate'
     elif requested_sort == 'display_name':
@@ -297,7 +282,6 @@ def _get_mongo_sort_from_requested_sort(requested_sort):
 
 
 def _get_sort_direction_from_requested_sort(requested_sort_direction):
-
     if requested_sort_direction.lower() == 'asc':
         return ASCENDING
     else:
@@ -305,17 +289,14 @@ def _get_sort_direction_from_requested_sort(requested_sort_direction):
 
 
 def _get_current_page(requested_page):
-
     return max(requested_page, 0)
 
 
 def _get_first_asset_index(current_page, page_size):
-
     return current_page * page_size
 
 
 def _get_assets_for_page(request, course_key, options):
-
     current_page = options['current_page']
     page_size = options['page_size']
     sort = options['sort']
@@ -328,12 +309,10 @@ def _get_assets_for_page(request, course_key, options):
 
 
 def _update_options_to_requery_final_page(query_options, total_asset_count):
-
     query_options['current_page'] = int(math.floor((total_asset_count - 1) / query_options['page_size']))
 
 
 def _get_assets_in_json_format(assets, course_key):
-
     assets_in_json_format = []
     for asset in assets:
         thumbnail_asset_key = _get_thumbnail_asset_key(asset, course_key)
@@ -354,7 +333,7 @@ def _get_assets_in_json_format(assets, course_key):
 
 
 def update_course_run_asset(course_key, upload_file):
-    course_exists_response = _get_response_if_course_does_not_exist(course_key)
+    course_exists_response = _get_error_if_course_does_not_exist(course_key)
 
     if course_exists_response is not None:
         return course_exists_response
@@ -386,14 +365,10 @@ def update_course_run_asset(course_key, upload_file):
 @ensure_csrf_cookie
 @login_required
 def _upload_asset(request, course_key):
-    """
-    This method allows for POST uploading of files into the course asset
-    library, which will be supported by GridFS in MongoDB.
-    """
-    course_exists_response = _get_response_if_course_does_not_exist(course_key)
+    course_exists_error = _get_error_if_course_does_not_exist(course_key)
 
-    if course_exists_response is not None:
-        return course_exists_response
+    if course_exists_error is not None:
+        return course_exists_error
 
     # compute a 'filename' which is similar to the location formatting, we're
     # using the 'filename' nomenclature since we're using a FileSystem paradigm
@@ -422,8 +397,7 @@ def _upload_asset(request, course_key):
     })
 
 
-def _get_response_if_course_does_not_exist(course_key):
-
+def _get_error_if_course_does_not_exist(course_key):
     try:
         modulestore().get_course(course_key)
     except ItemNotFoundError:
@@ -432,7 +406,6 @@ def _get_response_if_course_does_not_exist(course_key):
 
 
 def _get_file_metadata_as_dictionary(upload_file):
-
     upload_file = request.FILES['file']
 
     # compute a 'filename' which is similar to the location formatting; we're
@@ -447,13 +420,11 @@ def _get_file_metadata_as_dictionary(upload_file):
 
 
 def get_file_size(upload_file):
-
     # can be used for mocking test file sizes.
     return upload_file.size
 
 
 def _check_file_size_is_too_large(file_metadata):
-
     upload_file_size = file_metadata['upload_file_size']
     maximum_file_size_in_megabytes = settings.MAX_ASSET_UPLOAD_FILE_SIZE_IN_MB
     maximum_file_size_in_bytes = maximum_file_size_in_megabytes * 1000 ** 2
@@ -462,7 +433,6 @@ def _check_file_size_is_too_large(file_metadata):
 
 
 def _get_file_too_large_error_message(filename):
-
     return _(
         'File {filename} exceeds maximum size of '
         '{maximum_size_in_megabytes} MB.'
@@ -473,7 +443,6 @@ def _get_file_too_large_error_message(filename):
 
 
 def _get_file_content_and_path(file_metadata, course_key):
-
     content_location = StaticContent.compute_location(course_key, file_metadata['filename'])
     upload_file = file_metadata['upload_file']
 
@@ -492,12 +461,10 @@ def _get_file_content_and_path(file_metadata, course_key):
 
 
 def _check_thumbnail_uploaded(thumbnail_content):
-
     return thumbnail_content is not None
 
 
 def _get_thumbnail_asset_key(asset, course_key):
-
     # note, due to the schema change we may not have a 'thumbnail_location' in the result set
     thumbnail_location = asset.get('thumbnail_location', None)
     thumbnail_asset_key = None
@@ -541,12 +508,10 @@ def _update_asset(request, course_key, asset_key):
 
 
 def _save_content_to_trash(content):
-
     contentstore('trashcan').save(content)
 
 
 def delete_asset(course_key, asset_key):
-
     content = _check_existence_and_get_asset_content(asset_key)
 
     _save_content_to_trash(content)
@@ -557,7 +522,6 @@ def delete_asset(course_key, asset_key):
 
 
 def _check_existence_and_get_asset_content(asset_key):
-
     try:
         content = contentstore().find(asset_key)
         return content
@@ -566,7 +530,6 @@ def _check_existence_and_get_asset_content(asset_key):
 
 
 def _delete_thumbnail(thumbnail_location, course_key, asset_key):
-
     if thumbnail_location is not None:
 
         # We are ignoring the value of the thumbnail_location-- we only care whether
