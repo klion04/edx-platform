@@ -113,7 +113,7 @@ def _assets_json(request, course_key):
 
     Supports start (0-based index into the list of assets) and max query parameters.
     """
-
+    import pudb; pu.db
     request_options = _parse_request_to_dictionary(request)
 
     filter_parameters = None
@@ -176,7 +176,7 @@ def _parse_request_to_dictionary(request):
 
 def _get_requested_attribute(request, attribute):
 
-    return request.GET.get(attribute, request_defaults.get(attribute))
+    return request.GET.get(attribute, REQUEST_DEFAULTS.get(attribute))
 
 
 def _check_filter_parameters_are_valid(requested_filter):
@@ -194,7 +194,8 @@ def _check_filter_parameters_are_valid(requested_filter):
         error_message = {
             "error_code": "invalid_asset_type_filter",
             "developer_message": "The asset_type parameter to the request is invalid. "
-                                 "The {} filters are not described in the settings.FILES_AND_UPLOAD_TYPE_FILTERS dictionary.".format(invalid_filters)
+                                 "The {} filters are not described in the settings.FILES_AND_UPLOAD_TYPE_FILTERS dictionary.".format(
+                invalid_filters)
         }
         return JsonResponse({'error': error_message}, status=400)
 
@@ -238,7 +239,8 @@ def _get_javascript_expressions_for_other_():
                                                           file_extensions_for_requested_file_types for extension in
                                                           extensions]
 
-    javascript_expression_to_filter_extensions = _get_javascript_expressions_to_filter_extensions_with_operator(file_extensions_for_requested_file_types_flattened, "!=")
+    javascript_expression_to_filter_extensions = _get_javascript_expressions_to_filter_extensions_with_operator(
+        file_extensions_for_requested_file_types_flattened, "!=")
     joined_javascript_expressions_to_filter_extensions = _join_javascript_expressions_for_filters_with_separator(
         javascript_expression_to_filter_extensions, ' && ')
 
@@ -381,6 +383,7 @@ def update_course_run_asset(course_key, upload_file):
         content = sc_partial(upload_file.read())
         tempfile_path = None
 
+<<<<<<< HEAD
     # Verify a thumbnail can be created
     (thumbnail_content, thumbnail_location) = contentstore().generate_thumbnail(content, tempfile_path=tempfile_path)
 
@@ -504,7 +507,8 @@ def _get_file_content_and_path(file_metadata, course_key):
 
     file_can_be_chunked = upload_file.multiple_chunks()
 
-    static_content_partial = partial(StaticContent, content_location, file_metadata['filename'], file_metadata['mime_type'])
+    static_content_partial = partial(StaticContent, content_location, file_metadata['filename'],
+                                     file_metadata['mime_type'])
 
     if file_can_be_chunked:
         content = static_content_partial(upload_file.chunks())
