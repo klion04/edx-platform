@@ -5,9 +5,15 @@ define([
     'jquery', 'backbone', 'underscore', 'gettext', 'moment',
     'edx-ui-toolkit/js/utils/html-utils',
     'edx-ui-toolkit/js/utils/string-utils',
-    'text!templates/course-video-settings.underscore'
+    'text!templates/course-video-settings.underscore',
+    'text!templates/course-video-transcript-preferences.underscore',
+    'text!templates/course-video-transcript-provider-empty.underscore',
+    'text!templates/course-video-transcript-provider-selected.underscore',
+    'text!templates/transcript-organization-credentials.underscore',
 ],
-function($, Backbone, _, gettext, moment, HtmlUtils, StringUtils, TranscriptSettingsTemplate) {
+function($, Backbone, _, gettext, moment, HtmlUtils, StringUtils, TranscriptSettingsTemplate,
+         TranscriptPreferencesTemplate, TranscriptProviderEmptyStateTemplate, TranscriptProviderSelectedStateTemplate,
+         OrganizationCredentialsTemplate) {
     'use strict';
 
     var CourseVideoSettingsView,
@@ -23,6 +29,8 @@ function($, Backbone, _, gettext, moment, HtmlUtils, StringUtils, TranscriptSett
             'change #transcript-fidelity': 'fidelitySelected',
             'click .action-add-language': 'languageSelected',
             'click .action-remove-language': 'languageRemoved',
+            'click .action-change-provider': 'renderOrganizationCredentials',
+            'click .action-update-org-credentials': 'updateOrgCredentials',
             'click .action-update-course-video-settings': 'updateCourseVideoSettings',
             'click .action-close-course-video-settings': 'closeCourseVideoSettings'
         },
@@ -33,6 +41,10 @@ function($, Backbone, _, gettext, moment, HtmlUtils, StringUtils, TranscriptSett
             this.availableTranscriptionPlans = videoTranscriptSettings.transcription_plans;
             this.transcriptHandlerUrl = videoTranscriptSettings.transcript_preferences_handler_url;
             this.template = HtmlUtils.template(TranscriptSettingsTemplate);
+            this.transcriptPreferencesTemplate = HtmlUtils.template(TranscriptPreferencesTemplate);
+            this.organizationCredentialsTemplate = HtmlUtils.template(OrganizationCredentialsTemplate);
+            this.transcriptProviderEmptyStateTemplate = HtmlUtils.template(TranscriptProviderEmptyStateTemplate);
+            this.transcriptProviderSelectedStateTemplate = HtmlUtils.template(TranscriptProviderSelectedStateTemplate);
             this.setActiveTranscriptPlanData();
             this.selectedLanguages = [];
         },
@@ -121,9 +133,27 @@ function($, Backbone, _, gettext, moment, HtmlUtils, StringUtils, TranscriptSett
         },
 
         providerSelected: function(event) {
+            var orgCredentialsPresent = false,
+                $orgCredentailsWrapperEl = this.$el.find('.organization-credentials-wrapper'),
+                $transcriptPreferencesWrapperEl  = this.$el.find('.course-video-transcript-preferances-wrapper');;
+
             this.resetPlanData();
             this.selectedProvider = event.target.value;
-            this.renderPreferences();
+
+            if (!this.selectedProvider) {
+                // Hide organization credentials and transcript preferences views
+                $orgCredentailsWrapperEl.hide();
+                $transcriptPreferencesWrapperEl.hide();
+
+                // Show main footer again
+                this.$el.find('.course-video-settings-footer').show();
+            }
+            // if org provider specific credentials present
+            if (orgCredentialsPresent) {
+                this.renderTranscriptPreferences();
+            } else {
+                this.renderOrganizationCredentials();
+            }
         },
 
         languageSelected: function(event) {
@@ -156,37 +186,43 @@ function($, Backbone, _, gettext, moment, HtmlUtils, StringUtils, TranscriptSett
             this.populateLanguageMenu();
         },
 
-        renderProviders: function() {
-            var self = this,
-                providerPlan = self.availableTranscriptionPlans,
-                $providerEl = self.$el.find('.transcript-provider-group');
-
-            if (providerPlan) {
+        renderProviders: function(state) {
+            var state = state ? state : this.selectedProvider ? 'selected' : 'empty',
+                $transcriptProviderWrapperEl = this.$el.find('.transcript-provider-wrapper');
+            if (state === 'empty') {
                 HtmlUtils.setHtml(
-                    $providerEl,
-                    HtmlUtils.interpolateHtml(
-                        HtmlUtils.HTML('<input type="radio" id="transcript-provider-none" name="transcript-provider" value="" {checked}/><label for="transcript-provider-none">{text}</label>'),    // eslint-disable-line max-len
-                        {
-                            text: gettext('N/A'),
-                            checked: self.selectedProvider === '' ? 'checked' : ''
-                        }
-                    )
-                );
-
-                _.each(providerPlan, function(providerObject, key) {
-                    var checked = self.selectedProvider === key ? 'checked' : '';
-                    HtmlUtils.append(
-                        $providerEl,
-                        HtmlUtils.interpolateHtml(
-                            HtmlUtils.HTML('<input type="radio" id="transcript-provider-{value}" name="transcript-provider" value="{value}" {checked}/><label for="transcript-provider-{value}">{text}'),   // eslint-disable-line max-len
+                    $transcriptProviderWrapperEl,
+                    this.transcriptProviderEmptyStateTemplate({
+                        providers: [
                             {
-                                text: providerObject.display_name,
-                                value: key,
-                                checked: checked
-                            }
-                        )
-                    );
-                });
+                                key: 'none',
+                                value: '',
+                                name: gettext('N/A'),
+                                checked: this.selectedProvider === '' ? 'checked' : ''
+                            },
+                            {
+                                key: CIELO24,
+                                value: CIELO24,
+                                name: this.availableTranscriptionPlans[CIELO24].display_name,
+                                checked: this.selectedProvider === CIELO24 ? 'checked' : ''
+                            },
+                            {
+                                key: THREE_PLAY_MEDIA,
+                                value: THREE_PLAY_MEDIA,
+                                name: this.availableTranscriptionPlans[THREE_PLAY_MEDIA].display_name,
+                                checked: this.selectedProvider === THREE_PLAY_MEDIA ? 'checked' : ''
+                            },
+                        ]
+                    })
+                );
+            } else {
+                HtmlUtils.setHtml(
+                    $transcriptProviderWrapperEl,
+                    this.transcriptProviderSelectedStateTemplate({
+                        selectedProvider: this.availableTranscriptionPlans[this.selectedProvider].display_name
+                    })
+                );
+                this.renderTranscriptPreferences();
             }
         },
 
@@ -302,13 +338,6 @@ function($, Backbone, _, gettext, moment, HtmlUtils, StringUtils, TranscriptSett
             } else {
                 $languageMenuContainerEl.hide();
             }
-        },
-
-        renderPreferences: function() {
-            this.renderProviders();
-            this.renderTurnaround();
-            this.renderFidelity();
-            this.renderLanguages();
         },
 
         addLanguage: function(language) {
@@ -494,6 +523,12 @@ function($, Backbone, _, gettext, moment, HtmlUtils, StringUtils, TranscriptSett
             }
         },
 
+        updateOrgCredentials: function() {
+            this.updateSuccessResponseStatus(this.activeTranscriptPreferences);
+            this.$el.find('.organization-credentials-wrapper').hide();
+            this.renderProviders();
+        },
+
         updateCourseVideoSettings: function() {
             var $messageWrapperEl = this.$el.find('.course-video-settings-message-wrapper');
             if (this.validateCourseVideoSettings()) {
@@ -503,9 +538,53 @@ function($, Backbone, _, gettext, moment, HtmlUtils, StringUtils, TranscriptSett
             }
         },
 
+        renderOrganizationCredentials: function() {
+            var $orgCredentailsWrapperEl = this.$el.find('.organization-credentials-wrapper'),
+                $transcriptPreferencesWrapperEl  = this.$el.find('.course-video-transcript-preferances-wrapper');
+
+            // Render empty state providers view.
+            this.renderProviders('empty');
+
+            $transcriptPreferencesWrapperEl.hide();
+
+            HtmlUtils.setHtml(
+                $orgCredentailsWrapperEl,
+                this.organizationCredentialsTemplate({
+                    selectedProvider: {
+                        key: this.selectedProvider,
+                        name: this.availableTranscriptionPlans[this.selectedProvider].display_name
+                    },
+                    CIELO24: CIELO24,
+                    THREE_PLAY_MEDIA: THREE_PLAY_MEDIA
+                })
+            );
+            $orgCredentailsWrapperEl.show();
+            this.$el.find('.course-video-settings-footer').hide();
+        },
+
+        renderTranscriptPreferences: function() {
+            var $transcriptPreferencesWrapperEl  = this.$el.find('.course-video-transcript-preferances-wrapper'),
+                $orgCredentialsWrapperEl  = this.$el.find('.organization-credentials-wrapper');
+
+            $orgCredentialsWrapperEl.hide();
+
+            HtmlUtils.setHtml(
+                $transcriptPreferencesWrapperEl,
+                this.transcriptPreferencesTemplate({})
+            );
+            $transcriptPreferencesWrapperEl.show();
+
+            this.$el.find('.course-video-settings-footer').show();
+
+            this.renderTurnaround();
+            this.renderFidelity();
+            this.renderLanguages();
+        },
+
         render: function() {
             var dateModified = this.activeTranscriptionPlan ?
                 moment.utc(this.activeTranscriptionPlan.modified).format('ll') : '';
+
             HtmlUtils.setHtml(
                 this.$el,
                 this.template({
@@ -513,7 +592,7 @@ function($, Backbone, _, gettext, moment, HtmlUtils, StringUtils, TranscriptSett
                 })
             );
 
-            this.renderPreferences();
+            this.renderProviders();
 
             this.registerCloseClickHandler();
             this.setFixedCourseVideoSettingsPane();
