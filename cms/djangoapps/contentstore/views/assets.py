@@ -354,39 +354,26 @@ def _get_assets_in_json_format(assets, course_key):
 
 
 def update_course_run_asset(course_key, upload_file):
-    filename = upload_file.name
-    mime_type = upload_file.content_type
-    size = get_file_size(upload_file)
+    course_exists_response = _get_response_if_course_does_not_exist(course_key)
 
-    max_size_in_mb = settings.MAX_ASSET_UPLOAD_FILE_SIZE_IN_MB
-    max_file_size_in_bytes = max_size_in_mb * 1000 ** 2
-    if size > max_file_size_in_bytes:
-        msg = 'File {filename} exceeds the maximum size of {max_size_in_mb} MB.'.format(
-            filename=filename,
-            max_size_in_mb=max_size_in_mb
-        )
-        raise AssetSizeTooLargeException(msg)
+    if course_exists_response is not None:
+        return course_exists_response
 
-    content_loc = StaticContent.compute_location(course_key, filename)
+    file_metadata = _get_file_metadata_as_dictionary(upload_file)
 
-    chunked = upload_file.multiple_chunks()
-    sc_partial = partial(StaticContent, content_loc, filename, mime_type)
-    if chunked:
-        content = sc_partial(upload_file.chunks())
-        tempfile_path = upload_file.temporary_file_path()
-    else:
-        content = sc_partial(upload_file.read())
-        tempfile_path = None
+    is_file_too_large = _check_file_size_is_too_large(file_metadata)
+    if is_file_too_large is not None:
+        error_message = _get_file_too_large_error_message(file_metadata['filename'])
+        raise AssetSizeTooLargeException(error_message)
 
-<<<<<<< HEAD
-    # Verify a thumbnail can be created
+    content, temporary_file_path = _get_file_content_and_path(file_metadata, course_key)
+
     (thumbnail_content, thumbnail_location) = contentstore().generate_thumbnail(content, tempfile_path=tempfile_path)
 
     # delete cached thumbnail even if one couldn't be created this time (else the old thumbnail will continue to show)
     del_cached_content(thumbnail_location)
 
     if _check_thumbnail_uploaded(thumbnail_content):
-
         content.thumbnail_location = thumbnail_location
 
     contentstore().save(content)
@@ -403,14 +390,10 @@ def _upload_asset(request, course_key):
     This method allows for POST uploading of files into the course asset
     library, which will be supported by GridFS in MongoDB.
     """
-    # Does the course actually exist?!? Get anything from it to prove its
-    # existence
-    try:
-        modulestore().get_course(course_key)
-    except ItemNotFoundError:
-        # no return it as a Bad Request response
-        logging.error("Could not find course: %s", course_key)
-        return HttpResponseBadRequest()
+    course_exists_response = _get_response_if_course_does_not_exist(course_key)
+
+    if course_exists_response is not None:
+        return course_exists_response
 
     # compute a 'filename' which is similar to the location formatting, we're
     # using the 'filename' nomenclature since we're using a FileSystem paradigm
@@ -420,8 +403,8 @@ def _upload_asset(request, course_key):
 
     try:
         content = update_course_run_asset(course_key, upload_file)
-    except AssetSizeTooLargeException as ex:
-        return JsonResponse({'error': ex.message}, status=413)
+    except AssetSizeTooLargeException as exception:
+        return JsonResponse({'error': exception.message}, status=413)
 
     # readback the saved content - we need the database timestamp
     readback = contentstore().find(content.location)
@@ -439,7 +422,7 @@ def _upload_asset(request, course_key):
     })
 
 
-def _check_course_exists(course_key):
+def _get_response_if_course_does_not_exist(course_key):
 
     try:
         modulestore().get_course(course_key)
@@ -448,7 +431,7 @@ def _check_course_exists(course_key):
         return HttpResponseBadRequest()
 
 
-def _get_file_metadata_as_dictionary(request):
+def _get_file_metadata_as_dictionary(upload_file):
 
     upload_file = request.FILES['file']
 
@@ -457,7 +440,6 @@ def _get_file_metadata_as_dictionary(request):
     # here; we're just imposing the Location string formatting expectations to
     # keep things a bit more consistent
     return {
-        'upload_file': upload_file,
         'filename': upload_file.name,
         'mime_type': upload_file.content_type,
         'upload_file_size': get_file_size(upload_file)
@@ -470,28 +452,23 @@ def get_file_size(upload_file):
     return upload_file.size
 
 
-def _check_upload_file_size(file_metadata):
+def _check_file_size_is_too_large(file_metadata):
 
-    filename = file_metadata['filename']
     upload_file_size = file_metadata['upload_file_size']
-    maximum_file_size_in_bytes = settings.MAX_ASSET_UPLOAD_FILE_SIZE_IN_MB * 1000 ** 2
+    maximum_file_size_in_megabytes = settings.MAX_ASSET_UPLOAD_FILE_SIZE_IN_MB
+    maximum_file_size_in_bytes = maximum_file_size_in_megabytes * 1000 ** 2
 
-    if upload_file_size > maximum_file_size_in_bytes:
-        error_message = _get_file_too_large_error_message(filename)
-        return JsonResponse({'error': error_message}, status=413)
+    return upload_file_size > maximum_file_size_in_bytes
 
 
 def _get_file_too_large_error_message(filename):
 
     return _(
         'File {filename} exceeds maximum size of '
-        '{size_mb} MB. Please follow the instructions here '
-        'to upload a file elsewhere and link to it instead: '
-        '{faq_url}'
+        '{maximum_size_in_megabytes} MB.'
     ).format(
         filename=filename,
-        size_mb=settings.MAX_ASSET_UPLOAD_FILE_SIZE_IN_MB,
-        faq_url=settings.MAX_ASSET_UPLOAD_FILE_SIZE_URL,
+        maximum_size_in_megabytes=settings.MAX_ASSET_UPLOAD_FILE_SIZE_IN_MB,
     )
 
 
