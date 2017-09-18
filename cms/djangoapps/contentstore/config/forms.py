@@ -5,7 +5,7 @@ import logging
 
 from django import forms
 
-from contentstore.config.models import CourseNewAssetsPageFlag
+from cms.djangoapps.contentstore.config.models import CourseNewAssetsPageFlag
 
 from opaque_keys import InvalidKeyError
 from xmodule.modulestore.django import modulestore

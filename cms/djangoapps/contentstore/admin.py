@@ -5,8 +5,8 @@ Admin site bindings for contentstore
 from config_models.admin import ConfigurationModelAdmin, KeyedConfigurationModelAdmin
 from django.contrib import admin
 
-from contentstore.config.forms import CourseNewAssetsPageAdminForm
-from contentstore.config.models import NewAssetsPageFlag, CourseNewAssetsPageFlag
+from cms.djangoapps.contentstore.config.forms import CourseNewAssetsPageAdminForm
+from cms.djangoapps.contentstore.config.models import NewAssetsPageFlag, CourseNewAssetsPageFlag
 from contentstore.models import PushNotificationConfig, VideoUploadConfig
 
 class CourseNewAssetsPageAdmin(KeyedConfigurationModelAdmin):

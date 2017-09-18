@@ -38,10 +38,8 @@ class NewAssetsPageFlag(ConfigurationModel):
             return False
         elif not NewAssetsPageFlag.current().enabled_for_all_courses:
             if course_id:
-                try:
-                    return CourseNewAssetsPageFlag.objects.get(course_id=course_id).enabled
-                except CourseNewAssetsPageFlag.DoesNotExist:
-                    return False
+                effective = CourseNewAssetsPageFlag.objects.filter(course_id=course_id).order_by('-change_date').first()
+                return effective.enabled if effective is not None else False
             else:
                 return False
         else:
@@ -69,7 +67,7 @@ class CourseNewAssetsPageFlag(ConfigurationModel):
         app_label = "contentstore"
 
     # The course that these features are attached to.
-    course_id = CourseKeyField(max_length=255, db_index=True, unique=True)
+    course_id = CourseKeyField(max_length=255, db_index=True)
 
     def __unicode__(self):
         not_en = "Not "
