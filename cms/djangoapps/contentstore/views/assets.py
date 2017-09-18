@@ -185,8 +185,8 @@ def _get_error_if_invalid_parameters(requested_filter):
         error_message = {
             "error_code": "invalid_asset_type_filter",
             "developer_message": "The asset_type parameter to the request is invalid. "
-                                 "The {} filters are not described in the settings.FILES_AND_UPLOAD_TYPE_FILTERS dictionary.".format(
-                invalid_filters)
+                                 "The {} filters are not described in the settings.FILES_AND_UPLOAD_TYPE_FILTERS "
+                                 "dictionary.".format(invalid_filters)
         }
         return JsonResponse({'error': error_message}, status=400)
 
