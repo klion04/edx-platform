@@ -1525,8 +1525,8 @@ class VideoDescriptorTest(TestCase, VideoDescriptorTestBase):
             <video download_video="false" url_name="SampleProblem">
                 <video_asset client_video_id="test_client_video_id" duration="111.0" image="">
                     <encoded_video profile="mobile" url="http://example.com/video" file_size="222" bitrate="333"/>
-                    <transcripts video-id="{video_id}">
-                        <transcript file_format="srt" file_name="ext101.srt" language_code="ar" provider="Cielo24"/>
+                    <transcripts>
+                        <transcript file_format="srt" file_name="ext101.srt" language_code="ar" provider="Cielo24" video_id="{video_id}"/>
                     </transcripts>
                 </video_asset>
             </video>
@@ -1549,8 +1549,8 @@ class VideoDescriptorTest(TestCase, VideoDescriptorTestBase):
         expected_str = """
             <video url_name="SampleProblem" download_video="false">
                 <video_asset>
-                    <transcripts video-id="{video_id}">
-                        <transcript file_format="srt" file_name="ext101.srt" language_code="ar" provider="Cielo24" />
+                    <transcripts>
+                        <transcript file_format="srt" file_name="ext101.srt" language_code="ar" provider="Cielo24" video_id="{video_id}"/>
                     </transcripts>
                 </video_asset>
             </video>
@@ -1589,8 +1589,8 @@ class VideoDescriptorTest(TestCase, VideoDescriptorTestBase):
             <video edx_video_id="test_edx_video_id">
                 <video_asset client_video_id="test_client_video_id" duration="111.0">
                     <encoded_video profile="mobile" url="http://example.com/video" file_size="222" bitrate="333"/>
-                    <transcripts video-id="test_edx_video_id">
-                        <transcript file_format="srt" file_name="ext101.srt" language_code="ar" provider="Cielo24"/>
+                    <transcripts>
+                        <transcript file_format="srt" file_name="ext101.srt" language_code="ar" provider="Cielo24"  video_id="test_edx_video_id"/>
                     </transcripts>
                 </video_asset>
             </video>
@@ -1623,8 +1623,8 @@ class VideoDescriptorTest(TestCase, VideoDescriptorTestBase):
         xml_data = """
             <video>
                 <video_asset>
-                    <transcripts video-id="{video_id}">
-                        <transcript file_format="srt" file_name="ext101.srt" language_code="ar" provider="Cielo24"/>
+                    <transcripts>
+                        <transcript file_format="srt" file_name="ext101.srt" language_code="ar" provider="Cielo24" video_id="{video_id}"/>
                     </transcripts>
                 </video_asset>
             </video>
