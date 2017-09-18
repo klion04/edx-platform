@@ -12,7 +12,7 @@ import six
 from ccx_keys.locator import CCXLocator
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.urlresolvers import reverse
 from django.http import Http404, HttpResponse, HttpResponseBadRequest, HttpResponseNotFound
 from django.shortcuts import redirect
@@ -35,7 +35,7 @@ from contentstore.course_group_config import (
 from contentstore.course_info_model import delete_course_update, get_course_updates, update_course_updates
 from contentstore.courseware_index import CoursewareSearchIndexer, SearchIndexingError
 from contentstore.push_notification import push_notification_enabled
-from contentstore.tasks import rerun_course
+from contentstore.tasks import rerun_course as rerun_course_task
 from contentstore.utils import (
     add_instructor,
     get_lms_link_for_item,
@@ -782,11 +782,23 @@ def _create_or_rerun_course(request):
         definition_data = {'wiki_slug': wiki_slug}
         fields.update(definition_data)
 
-        if 'source_course_key' in request.json:
-            return _rerun_course(request, org, course, run, fields)
+        source_course_key = request.json.get('source_course_key')
+        if source_course_key:
+            source_course_key = CourseKey.from_string(source_course_key)
+            destination_course_key = rerun_course(request.user, source_course_key, org, course, run, fields)
+            return JsonResponse({
+                'url': reverse_url('course_handler'),
+                'destination_course_key': unicode(destination_course_key)
+            })
         else:
-            return _create_new_course(request, org, course, run, fields)
-
+            try:
+                new_course = create_new_course(request.user, org, course, run, fields)
+                return JsonResponse({
+                    'url': reverse_course_url('course_handler', new_course.id),
+                    'course_key': unicode(new_course.id),
+                })
+            except ValidationError as ex:
+                return JsonResponse({'error': ex.message}, status=400)
     except DuplicateCourseError:
         return JsonResponse({
             'ErrMsg': _(
@@ -807,27 +819,21 @@ def _create_or_rerun_course(request):
         )
 
 
-def _create_new_course(request, org, number, run, fields):
+def create_new_course(user, org, number, run, fields):
     """
-    Create a new course.
-    Returns the URL for the course overview page.
-    Raises DuplicateCourseError if the course already exists
+    Create a new course run.
+
+    Raises:
+        DuplicateCourseError: Course run already exists.
     """
     org_data = get_organization_by_short_name(org)
     if not org_data and organizations_enabled():
-        return JsonResponse(
-            {'error': _('You must link this course to an organization in order to continue. '
-                        'Organization you selected does not exist in the system, '
-                        'you will need to add it to the system')},
-            status=400
-        )
+        raise ValidationError(_('You must link this course to an organization in order to continue. Organization '
+                                'you selected does not exist in the system, you will need to add it to the system'))
     store_for_new_course = modulestore().default_modulestore.get_modulestore_type()
-    new_course = create_new_course_in_store(store_for_new_course, request.user, org, number, run, fields)
+    new_course = create_new_course_in_store(store_for_new_course, user, org, number, run, fields)
     add_organization_course(org_data, new_course.id)
-    return JsonResponse({
-        'url': reverse_course_url('course_handler', new_course.id),
-        'course_key': unicode(new_course.id),
-    })
+    return new_course
 
 
 def create_new_course_in_store(store, user, org, number, run, fields):
@@ -860,15 +866,12 @@ def create_new_course_in_store(store, user, org, number, run, fields):
     return new_course
 
 
-def _rerun_course(request, org, number, run, fields):
+def rerun_course(user, source_course_key, org, number, run, fields, async=True):
     """
-    Reruns an existing course.
-    Returns the URL for the course listing page.
+    Rerun an existing course.
     """
-    source_course_key = CourseKey.from_string(request.json.get('source_course_key'))
-
     # verify user has access to the original course
-    if not has_studio_write_access(request.user, source_course_key):
+    if not has_studio_write_access(user, source_course_key):
         raise PermissionDenied()
 
     # create destination course key
@@ -882,23 +885,23 @@ def _rerun_course(request, org, number, run, fields):
 
     # Make sure user has instructor and staff access to the destination course
     # so the user can see the updated status for that course
-    add_instructor(destination_course_key, request.user, request.user)
+    add_instructor(destination_course_key, user, user)
 
     # Mark the action as initiated
-    CourseRerunState.objects.initiated(source_course_key, destination_course_key, request.user, fields['display_name'])
+    CourseRerunState.objects.initiated(source_course_key, destination_course_key, user, fields['display_name'])
 
     # Clear the fields that must be reset for the rerun
     fields['advertised_start'] = None
 
-    # Rerun the course as a new celery task
     json_fields = json.dumps(fields, cls=EdxJSONEncoder)
-    rerun_course.delay(unicode(source_course_key), unicode(destination_course_key), request.user.id, json_fields)
+    args = [unicode(source_course_key), unicode(destination_course_key), user.id, json_fields]
 
-    # Return course listing page
-    return JsonResponse({
-        'url': reverse_url('course_handler'),
-        'destination_course_key': unicode(destination_course_key)
-    })
+    if async:
+        rerun_course_task.delay(*args)
+    else:
+        rerun_course_task(*args)
+
+    return destination_course_key
 
 
 # pylint: disable=unused-argument

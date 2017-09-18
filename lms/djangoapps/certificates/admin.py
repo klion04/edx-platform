@@ -1,8 +1,11 @@
 """
 django admin pages for certificates models
 """
+from operator import itemgetter
+
 from config_models.admin import ConfigurationModelAdmin
 from django import forms
+from django.conf import settings
 from django.contrib import admin
 
 from certificates.models import (
@@ -27,6 +30,12 @@ class CertificateTemplateForm(forms.ModelForm):
         org_choices.insert(0, ('', 'None'))
         self.fields['organization_id'] = forms.TypedChoiceField(
             choices=org_choices, required=False, coerce=int, empty_value=None
+        )
+        languages = settings.CERTIFICATE_TEMPLATE_LANGUAGES.items()
+        lang_choices = sorted(languages, key=itemgetter(1))
+        lang_choices.insert(0, (None, 'All Languages'))
+        self.fields['language'] = forms.ChoiceField(
+            choices=lang_choices, required=False
         )
 
     class Meta(object):
@@ -64,7 +73,7 @@ class CertificateGenerationCourseSettingAdmin(admin.ModelAdmin):
     """
     Django admin customizations for CertificateGenerationCourseSetting model
     """
-    list_display = ('course_key', 'enabled')
+    list_display = ('course_key', 'self_generation_enabled', 'language_specific_templates_enabled')
     search_fields = ('course_key',)
     show_full_result_count = False
 

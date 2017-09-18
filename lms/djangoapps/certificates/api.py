@@ -267,7 +267,7 @@ def set_cert_generation_enabled(course_key, is_enabled):
             certificates for this course.
 
     """
-    CertificateGenerationCourseSetting.set_enabled_for_course(course_key, is_enabled)
+    CertificateGenerationCourseSetting.set_self_generatation_enabled_for_course(course_key, is_enabled)
     cert_event_type = 'enabled' if is_enabled else 'disabled'
     event_name = '.'.join(['edx', 'certificate', 'generation', cert_event_type])
     tracker.emit(event_name, {
@@ -321,7 +321,7 @@ def cert_generation_enabled(course_key):
     """
     return (
         CertificateGenerationConfiguration.current().enabled and
-        CertificateGenerationCourseSetting.is_enabled_for_course(course_key)
+        CertificateGenerationCourseSetting.is_self_generation_enabled_for_course(course_key)
     )
 
 
@@ -484,9 +484,9 @@ def get_active_web_certificate(course, is_preview_mode=None):
     return None
 
 
-def get_certificate_template(course_key, mode):
+def get_certificate_template(course_key, mode, language):  # pylint: disable=unused-argument
     """
-    Retrieves the custom certificate template based on course_key and mode.
+    Retrieves the custom certificate template based on course_key, mode, and language.
     """
     org_id, template = None, None
     # fetch organization of the course
