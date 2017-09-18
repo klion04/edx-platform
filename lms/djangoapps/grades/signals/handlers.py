@@ -31,7 +31,8 @@ from .signals import (
     PROBLEM_WEIGHTED_SCORE_CHANGED,
     SCORE_PUBLISHED,
     SUBSECTION_SCORE_CHANGED,
-    SUBSECTION_OVERRIDE_CHANGED
+    SUBSECTION_OVERRIDE_CHANGED,
+    USER_PARTITION_CHANGED,
 )
 
 log = getLogger(__name__)
@@ -242,6 +243,11 @@ def recalculate_course_grade(sender, course, course_structure, user, **kwargs): 
     Updates a saved course grade.
     """
     CourseGradeFactory().update(user, course=course, course_structure=course_structure)
+
+
+@receiver(USER_PARTITION_CHANGED)
+def recalculation_course_grade_on_up_change(sender, user, course_key, **kwargs):
+    CourseGradeFactory().update(user, course_key=course_key, force_update_subsections=True)
 
 
 def _emit_event(kwargs):

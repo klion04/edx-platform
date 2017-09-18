@@ -101,3 +101,8 @@ SUBSECTION_OVERRIDE_CHANGED = Signal(
                            # score that was created.
     ]
 )
+
+# Signal that indicates that a user has changed user partitions.
+# This signal is generated when a user changes cohorts or enrollment
+# tracks.
+USER_PARTITION_CHANGED = Signal(providing_args=['user', 'course_key'])
