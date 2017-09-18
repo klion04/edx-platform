@@ -1284,12 +1284,12 @@ FILES_AND_UPLOAD_TYPE_FILTERS = {
         'text/x-sh',
     ],
     "Audio": ['audio/mpeg', 'audio/mp3', 'audio/x-wav', 'audio/ogg', 'audio/wav', 'audio/aac', 'audio/x-m4a',
-              'audio/mp4', 'audio/x-ms-wma',],
+              'audio/mp4', 'audio/x-ms-wma', ],
     "Code": ['application/json', 'text/html', 'text/javascript', 'application/javascript', 'text/css', 'text/x-python',
              'application/x-java-jnlp-file', 'application/xml', 'application/postscript', 'application/x-javascript',
              'application/java-vm', 'text/x-c++src', 'text/xml', 'text/x-scss', 'application/x-python-code',
              'application/java-archive', 'text/x-python-script', 'application/x-ruby', 'application/mathematica',
-             'text/coffeescript', 'text/x-matlab', 'application/sql', 'text/php']
+             'text/coffeescript', 'text/x-matlab', 'application/sql', 'text/php', ]
 }
 
 # Default to no Search Engine

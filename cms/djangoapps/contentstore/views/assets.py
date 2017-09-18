@@ -191,7 +191,7 @@ def _check_filter_parameters_are_valid(requested_filter):
             "error_code": "invalid_asset_type_filter",
             "developer_message": "The asset_type parameter to the request is invalid. "
                                  "The {} filters are not described in the settings.FILES_AND_UPLOAD_TYPE_FILTERS dictionary.".format(
-                invalid_filters)
+                    invalid_filters)
         }
         return JsonResponse({'error': error_message}, status=400)
 
@@ -217,7 +217,6 @@ def _get_mongo_where_operator_parameters_for_filters(requested_file_types):
             javascript_filters.append(javascript_filters_for_file_types)
 
     javascript_filters = _join_javascript_expressions_for_filters_with_separator(javascript_filters, "||")
-
 
     return _format_javascript_filters_for_mongo_where(javascript_filters)
 
