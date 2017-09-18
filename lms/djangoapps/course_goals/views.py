@@ -1,6 +1,5 @@
 """ Course Goals API """
 from django.contrib.auth import get_user_model
-from django.http import Http404, JsonResponse
 from edx_rest_framework_extensions.authentication import JwtAuthentication
 from opaque_keys.edx.keys import CourseKey
 from openedx.core.lib.api.permissions import IsStaffOrOwner

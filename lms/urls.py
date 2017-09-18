@@ -827,7 +827,7 @@ urlpatterns += (
 
 if settings.FEATURES.get('ENABLE_COURSE_GOALS'):
     urlpatterns += (
-        url(r'^course_goals/', include('lms.djangoapps.course_goals.urls', namespace='course_goals')),
+        url(r'^api/course_goal', include('lms.djangoapps.course_goals.urls', namespace='course_goals_api')),
     )
 
 # Embargo
