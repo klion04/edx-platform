@@ -111,6 +111,7 @@ case "$TEST_SUITE" in
                 paver test_system -s lms --eval-attr="shard==$SHARD" $PAVER_ARGS $PARALLEL 2> lms-tests.$SHARD.log
                 ;;
             4|"noshard")
+                ls -l
                 paver test_system -s lms --eval-attr='not shard' $PAVER_ARGS $PARALLEL 2> lms-tests.4.log
                 ;;
             *)
