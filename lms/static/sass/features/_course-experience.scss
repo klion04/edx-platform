@@ -15,11 +15,12 @@
   }
 
   .message-content {
+    @include margin(0, 0, $baseline, $baseline);
     position: relative;
     border: 1px solid $lms-border-color;
-    margin: 0 $baseline $baseline/2;
     padding: $baseline;
     border-radius: $baseline/4;
+    width: calc(100% - 90px);
 
     @media (max-width: $grid-breakpoints-md) {
       width: 100%;

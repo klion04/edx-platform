@@ -397,7 +397,7 @@ FEATURES = {
     # Whether the bulk enrollment view is enabled.
     'ENABLE_BULK_ENROLLMENT_VIEW': False,
 
-    # Whether the user can set a course goal
+    # Whether course goals is enabled.
     'ENABLE_COURSE_GOALS': True,
 }
 

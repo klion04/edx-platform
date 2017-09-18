@@ -1,5 +1,5 @@
 """
-Course Goals API URLs
+Course Goals URLs
 """
 from django.conf.urls import include, patterns, url
 from rest_framework import routers

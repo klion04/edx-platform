@@ -1,4 +1,6 @@
-""" Course Goals API """
+"""
+Course Goals Views - includes REST API
+"""
 from django.contrib.auth import get_user_model
 from edx_rest_framework_extensions.authentication import JwtAuthentication
 from opaque_keys.edx.keys import CourseKey
@@ -28,7 +30,7 @@ class CourseGoalSerializer(serializers.ModelSerializer):
         """
         if value not in CourseGoalOption.get_course_goal_keys():
             raise serializers.ValidationError(
-                'Provided goal key, {goal_key}, is not a course key (options= {goal_options}).'.format(
+                'Provided goal key, {goal_key}, is not a valid goal key (options= {goal_options}).'.format(
                     goal_key=value,
                     goal_options=[option.value for option in CourseGoalOption],
                 )
@@ -41,7 +43,11 @@ class CourseGoalSerializer(serializers.ModelSerializer):
         """
         course_key = CourseKey.from_string(value)
         if not course_key:
-            raise serializers.ValidationError('Provided course_id does not map to a course.')
+            raise serializers.ValidationError(
+                'Provided course_key ({course_key}) does not map to a course.'.format(
+                    course_key=course_key
+                )
+            )
         return course_key
 
 
@@ -61,9 +67,9 @@ class CourseGoalViewSet(viewsets.ModelViewSet):
             or the course_id is invalid or cannot be found.
 
     **Example Requests**
-        GET /course_goal/api/v0/course_goal?course_key={course_key1}&username={username}
-        POST /course_goal/api/v0/course_goal?course_key={course_key1}&goal={goal}&username={username}
-            Request data: {"course_key": <course-key>, "goal_key": "unsure", "username": "testUser"}
+        GET /api/course_goal/v0/course_goals/
+        POST api/course_goal/v0/course_goals/
+            Request data: {"course_key": <course-key>, "goal_key": "<goal-key>", "user": "<username>"}
 
     """
     authentication_classes = (JwtAuthentication, SessionAuthentication,)

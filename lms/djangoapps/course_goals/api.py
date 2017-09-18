@@ -43,7 +43,6 @@ class CourseGoalOption(Enum):
     These options are set to a string goal key so that they can be
     referenced elsewhere in the code when necessary.
     """
-
     CERTIFY = 'certify'
     COMPLETE = 'complete'
     EXPLORE = 'explore'

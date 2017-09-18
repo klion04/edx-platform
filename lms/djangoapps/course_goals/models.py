@@ -1,5 +1,5 @@
 """
-Goal-related models.
+Course Goals Models
 """
 from django.contrib.auth.models import User
 from django.db import models
