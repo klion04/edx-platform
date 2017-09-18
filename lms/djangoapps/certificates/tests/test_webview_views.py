@@ -928,7 +928,7 @@ class CertificatesViewsTests(CommonCertificatesTestCase):
 
         self._create_custom_template(org_id=1, mode='honor', course_key=unicode(self.course.id), language=None)
         self._create_custom_template(org_id=1, mode='honor', course_key=unicode(self.course.id), language='es')
-        
+
         test_url = get_certificate_url(
             user_id=self.user.id,
             course_id=unicode(self.course.id)

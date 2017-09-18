@@ -498,23 +498,21 @@ def get_certificate_template(course_key, mode, language):
     org_and_mode_templates = active_templates.filter(organization_id=org_id, mode=mode,)
     key_org_and_mode_templates = org_and_mode_templates.filter(course_key=course_key)
 
-    # Create list for easy operation, with template sets ordered by priority to return 
+    # Create list for easy operation, with template sets ordered by priority to return
     # e.g. a key_org_and_mode_templates should be returned before an org_and_mode_template
     template_sets = [key_org_and_mode_templates, org_and_mode_templates, org_templates, mode_templates]
-    
     for template_set in template_sets:
-        template_set = check_for_language_specific_template(template_set, language)
+        template_set = get_language_or_default_templates(templates, language)
         if template_set:
             return template_set[0].template
 
 
-def check_for_language_specific_template(templates, language):
+def get_language_or_default_templates(templates, language):
     """
-    Returns the template that matches the passed in language
-
-    Returns the default templates if language is None or no templates match the language
+    Returns templates that match passed in language.
+    Returns default templates If no language matches, or no language passed is None
     """
-    language_templates = templates.filter(language=language) 
+    language_templates = templates.filter(language=language)
     return language_templates if language_templates else templates.filter(language=None)
 
 
