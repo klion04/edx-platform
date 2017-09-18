@@ -74,6 +74,10 @@ function($, Backbone, _, gettext, moment, HtmlUtils, StringUtils, TranscriptSett
             this.availableLanguages = [];
             this.activeLanguages = [];
             this.selectedLanguages = [];
+            this.organizationCredentials = {
+                'Cielo24': true,
+                '3PlayMedia': false
+            }
         },
 
         setActiveTranscriptPlanData: function() {
@@ -149,7 +153,7 @@ function($, Backbone, _, gettext, moment, HtmlUtils, StringUtils, TranscriptSett
                 this.$el.find('.course-video-settings-footer').show();
             }
             // if org provider specific credentials present
-            if (orgCredentialsPresent) {
+            if (this.organizationCredentials[this.selectedProvider]) {
                 this.renderTranscriptPreferences();
             } else {
                 this.renderOrganizationCredentials();
@@ -365,8 +369,9 @@ function($, Backbone, _, gettext, moment, HtmlUtils, StringUtils, TranscriptSett
             );
         },
 
-        updateSuccessResponseStatus: function(data) {
-            var dateModified = data ? moment.utc(data.modified).format('ll') : '';
+        updateSuccessResponseStatus: function(data, successMessage) {
+            var dateModified = data ? moment.utc(data.modified).format('ll') : '',
+                successMessage = successMessage ? successMessage : gettext('Settings updated');
 
             // Update last modified date
             if (dateModified) {
@@ -382,7 +387,7 @@ function($, Backbone, _, gettext, moment, HtmlUtils, StringUtils, TranscriptSett
                 );
             }
 
-            this.renderResponseStatus(gettext('Settings updated'), 'success');
+            this.renderResponseStatus(successMessage, 'success');
             // Sync ActiveUploadListView with latest active plan.
             this.activeTranscriptionPlan = data;
             Backbone.trigger('coursevideosettings:syncActiveTranscriptPreferences', this.activeTranscriptionPlan);
@@ -524,9 +529,15 @@ function($, Backbone, _, gettext, moment, HtmlUtils, StringUtils, TranscriptSett
         },
 
         updateOrgCredentials: function() {
-            this.updateSuccessResponseStatus(this.activeTranscriptPreferences);
             this.$el.find('.organization-credentials-wrapper').hide();
             this.renderProviders();
+            this.updateSuccessResponseStatus(
+                this.activeTranscriptionPlan,
+                gettext('{selectedProvider} credentials saved').replace(
+                    '{selectedProvider}',
+                    this.availableTranscriptionPlans[this.selectedProvider].display_name
+                )
+            );
         },
 
         updateCourseVideoSettings: function() {
