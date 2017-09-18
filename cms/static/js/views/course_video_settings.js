@@ -391,6 +391,9 @@ function($, Backbone, _, gettext, moment, HtmlUtils, StringUtils, TranscriptSett
             // Sync ActiveUploadListView with latest active plan.
             this.activeTranscriptionPlan = data;
             Backbone.trigger('coursevideosettings:syncActiveTranscriptPreferences', this.activeTranscriptionPlan);
+
+            // Now re-render providers state.
+            this.renderProviders();
         },
 
         updateFailResponseStatus: function(data) {
