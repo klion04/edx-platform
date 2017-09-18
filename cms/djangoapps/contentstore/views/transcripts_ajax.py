@@ -16,10 +16,8 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.http import Http404, HttpResponse
 from django.utils.translation import ugettext as _
-from edxval import api as edxval_api
 from opaque_keys import InvalidKeyError
 from opaque_keys.edx.keys import UsageKey
-from openedx.core.djangoapps.video_config.models import VideoTranscriptEnabledFlag
 
 from student.auth import has_course_author_access
 from util.json_request import JsonResponse
@@ -29,18 +27,19 @@ from xmodule.exceptions import NotFoundError
 from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.exceptions import ItemNotFoundError
 from xmodule.video_module.transcripts_utils import (
-    GetTranscriptsFromYouTubeException,
-    TranscriptsRequestValidationException,
     copy_or_rename_transcript,
     download_youtube_subs,
+    GetTranscriptsFromYouTubeException,
+    get_video_transcript_content,
     generate_srt_from_sjson,
     generate_subs_from_source,
     get_transcripts_from_youtube,
     manage_video_subtitles_save,
     remove_subs_from_store,
+    Transcript,
+    TranscriptsRequestValidationException,
     youtube_video_transcript_name,
 )
-from xmodule.video_module.transcripts_utils import get_video_ids_info, Transcript
 
 __all__ = [
     'upload_transcripts',
@@ -179,24 +178,26 @@ def download_transcripts(request):
         return response
     except NotFoundError:
         log.debug("Can't find content in storage for %s subs", subs_id)
-        # Try searching in VAL for the transcript as a last resort if video transcripts feature is enabled.
-        feature_enabled = VideoTranscriptEnabledFlag.feature_enabled(course_id=item.location.course_key)
-        if feature_enabled:
-            # Look for transcripts in VAL first.
-            __, video_candidate_ids = get_video_ids_info(item.edx_video_id, item.youtube_id_1_0, item.html5_sources)
-            transcript = edxval_api.get_video_transcript_data(video_ids=video_candidate_ids, language_code=u'en')
-
-            if transcript:
-                transcript_content = Transcript.convert(
-                    transcript['content'],
-                    input_format='sjson',
-                    output_format='srt'
-                )
-                # Construct an HTTP response
-                filename = transcript['file_name'].split('.')[0].encode('utf8')
-                response = HttpResponse(transcript_content, content_type='application/x-subrip; charset=utf-8')
-                response['Content-Disposition'] = 'attachment; filename="{filename}.srt"'.format(filename=filename)
-                return response
+        # Try searching in VAL for the transcript as a last resort
+        # if video transcripts feature is enabled.
+        transcript = get_video_transcript_content(
+            course_id=item.location.course_key,
+            language_code=u'en',
+            edx_video_id=item.edx_video_id,
+            youtube_id_1_0=item.youtube_id_1_0,
+            html5_sources=item.html5_sources,
+        )
+        if transcript:
+            transcript_content = Transcript.convert(
+                transcript['content'],
+                input_format='sjson',
+                output_format='srt'
+            )
+            # Construct an HTTP response
+            filename = transcript['file_name'].split('.')[0].encode('utf8')
+            response = HttpResponse(transcript_content, content_type='application/x-subrip; charset=utf-8')
+            response['Content-Disposition'] = 'attachment; filename="{filename}.srt"'.format(filename=filename)
+            return response
 
         raise Http404
 
@@ -306,12 +307,16 @@ def check_transcripts(request):
 
     command, subs_to_use = _transcripts_logic(transcripts_presence, videos)
     if command == 'not_found':
-        # Try searching in VAL for the transcript as a last resort if video transcripts feature is enabled.
-        feature_enabled = VideoTranscriptEnabledFlag.feature_enabled(course_id=item.location.course_key)
-        if feature_enabled:
-            __, video_candidate_ids = get_video_ids_info(item.edx_video_id, item.youtube_id_1_0, item.html5_sources)
-            video_transcript = edxval_api.get_video_transcript_data(video_ids=video_candidate_ids, language_code=u'en')
-            command = 'found' if video_transcript else command
+        # Try searching in VAL for the transcript as a last resort
+        # if video transcripts feature is enabled.
+        video_transcript = get_video_transcript_content(
+            course_id=item.location.course_key,
+            language_code=u'en',
+            edx_video_id=item.edx_video_id,
+            youtube_id_1_0=item.youtube_id_1_0,
+            html5_sources=item.html5_sources,
+        )
+        command = 'found' if video_transcript else command
 
     transcripts_presence.update({
         'command': command,

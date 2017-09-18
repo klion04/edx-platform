@@ -41,7 +41,13 @@ from xmodule.x_module import XModule, module_attr
 from xmodule.xml_module import deserialize_field, is_pointer_tag, name_to_pathname
 
 from .bumper_utils import bumperize
-from .transcripts_utils import Transcript, VideoTranscriptsMixin, get_html5_ids, get_video_ids_info
+from .transcripts_utils import (
+    get_html5_ids,
+    get_video_ids_info,
+    get_video_transcript_content,
+    Transcript,
+    VideoTranscriptsMixin,
+)
 from .video_handlers import VideoStudentViewHandlers, VideoStudioViewHandlers
 from .video_utils import create_youtube_string, format_xml_exception_message, get_poster, rewrite_video_url
 from .video_xfields import VideoFields
@@ -180,16 +186,15 @@ class VideoModule(VideoFields, VideoTranscriptsMixin, VideoStudentViewHandlers, 
             elif sub or other_lang:
                 track_url = self.runtime.handler_url(self, 'transcript', 'download').rstrip('/?')
 
-            # Check transcript's availability in edx-val only
-            # if the corresponding feature is enabled for this course
-            feature_enabled = VideoTranscriptEnabledFlag.feature_enabled(course_id=self.course_id)
-            if not track_url and feature_enabled and edxval_api:
-                __, video_candidate_ids = get_video_ids_info(
-                    self.edx_video_id,
-                    self.youtube_id_1_0,
-                    self.html5_sources,
+            if not track_url:
+                # Check transcript's availability in edx-val
+                transcript = get_video_transcript_content(
+                    course_id=self.course_id,
+                    language_code=self.transcript_language,
+                    edx_video_id=self.edx_video_id,
+                    youtube_id_1_0=self.youtube_id_1_0,
+                    html5_sources=self.html5_sources,
                 )
-                transcript = edxval_api.get_video_transcript_data(video_candidate_ids, self.transcript_language)
                 if transcript:
                     track_url = self.runtime.handler_url(self, 'transcript', 'download').rstrip('/?')
 
