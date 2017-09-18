@@ -519,6 +519,7 @@ def get_video_transcript_content(course_id, language_code, edx_video_id, youtube
 
     return transcript
 
+
 class Transcript(object):
     """
     Container for transcript methods.

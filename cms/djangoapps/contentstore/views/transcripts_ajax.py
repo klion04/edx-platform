@@ -179,7 +179,6 @@ def download_transcripts(request):
     except NotFoundError:
         log.debug("Can't find content in storage for %s subs", subs_id)
         # Try searching in VAL for the transcript as a last resort
-        # if video transcripts feature is enabled.
         transcript = get_video_transcript_content(
             course_id=item.location.course_key,
             language_code=u'en',
@@ -308,7 +307,6 @@ def check_transcripts(request):
     command, subs_to_use = _transcripts_logic(transcripts_presence, videos)
     if command == 'not_found':
         # Try searching in VAL for the transcript as a last resort
-        # if video transcripts feature is enabled.
         video_transcript = get_video_transcript_content(
             course_id=item.location.course_key,
             language_code=u'en',
