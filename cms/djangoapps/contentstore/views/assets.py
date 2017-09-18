@@ -28,9 +28,6 @@ from util.json_request import JsonResponse
 
 __all__ = ['assets_handler']
 
-
-# pylint: disable=unused-argument
-
 REQUEST_DEFAULTS = {
     'page': 0,
     'page_size': 50,
@@ -113,7 +110,6 @@ def _assets_json(request, course_key):
 
     Supports start (0-based index into the list of assets) and max query parameters.
     """
-    import pudb; pu.db
     request_options = _parse_request_to_dictionary(request)
 
     filter_parameters = None
