@@ -20,6 +20,7 @@ class CourseGoal(models.Model):  # pylint: disable=model-missing-unicode
     class Meta:
         unique_together = ("user", "course_key")
 
+
 @receiver(post_save, sender=CourseGoal, dispatch_uid="emit_course_goal_event")
 def emit_course_goal_event(sender, instance, **kwargs):
     name = 'edx.course.goal.added' if kwargs.get('created', False) else 'edx.course.goal.updated'
