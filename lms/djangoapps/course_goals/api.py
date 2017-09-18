@@ -6,7 +6,7 @@ from opaque_keys.edx.keys import CourseKey
 from django.utils.translation import ugettext as _
 from openedx.core.djangolib.markup import Text
 
-from models import CourseGoal
+from lms.djangoapps.course_goals.models import CourseGoal
 
 
 def add_course_goal(user, course_id, goal_key):

@@ -2241,7 +2241,7 @@ INSTALLED_APPS = [
     'openedx.core.djangoapps.schedules.apps.SchedulesConfig',
 
     # Course Goals
-    'course_goals',
+    'lms.djangoapps.course_goals',
 
     # Features
     'openedx.features.course_bookmarks',
