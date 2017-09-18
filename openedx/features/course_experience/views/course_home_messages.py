@@ -2,28 +2,28 @@
 View logic for handling course messages.
 """
 import math
-
-from babel.dates import format_date, format_timedelta
 from datetime import datetime
 
-from course_modes.models import CourseMode
-from courseware.courses import get_course_with_access
-from django.contrib import auth
+from babel.dates import format_date, format_timedelta
 from django.conf import settings
+from django.contrib import auth
 from django.template.loader import render_to_string
 from django.utils.http import urlquote_plus
 from django.utils.timezone import UTC
-from django.utils.translation import get_language, to_locale
 from django.utils.translation import ugettext as _
-from openedx.core.djangolib.markup import Text, HTML
+from django.utils.translation import get_language, to_locale
 from opaque_keys.edx.keys import CourseKey
 from rest_framework.reverse import reverse
 from web_fragments.fragment import Fragment
 
-from course_goals.api import get_course_goal, CourseGoalOption, get_goal_text
+from course_modes.models import CourseMode
+from courseware.courses import get_course_with_access
+from lms.djangoapps.course_goals.api import CourseGoalOption, get_course_goal, get_goal_text
 from openedx.core.djangoapps.plugin_api.views import EdxFragmentView
+from openedx.core.djangolib.markup import HTML, Text
 from openedx.features.course_experience import CourseHomeMessages
 from student.models import CourseEnrollment
+
 from .. import ENABLE_COURSE_GOALS
 
 

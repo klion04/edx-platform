@@ -6,8 +6,8 @@ from openedx.core.lib.api.permissions import IsStaffOrOwner
 from rest_framework import permissions, serializers, viewsets
 from rest_framework.authentication import SessionAuthentication
 
-import api
-from lms.djangoapps.course_goals.models import CourseGoal
+from .api import CourseGoalOption
+from .models import CourseGoal
 
 User = get_user_model()
 
@@ -26,11 +26,11 @@ class CourseGoalSerializer(serializers.ModelSerializer):
         """
         Ensure that the goal_key is valid.
         """
-        if value not in api.CourseGoalOption.get_course_goal_keys():
+        if value not in CourseGoalOption.get_course_goal_keys():
             raise serializers.ValidationError(
                 'Provided goal key, {goal_key}, is not a course key (options= {goal_options}).'.format(
                     goal_key=value,
-                    goal_options=[option.value for option in api.CourseGoalOption],
+                    goal_options=[option.value for option in CourseGoalOption],
                 )
             )
         return value
