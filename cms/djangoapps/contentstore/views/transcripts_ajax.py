@@ -146,6 +146,7 @@ def download_transcripts(request):
     Raises Http404 if unsuccessful.
     """
     locator = request.GET.get('locator')
+    subs_id = request.GET.get('subs_id')
     if not locator:
         log.debug('GET data without "locator" property.')
         raise Http404
@@ -161,7 +162,6 @@ def download_transcripts(request):
         raise Http404
 
     try:
-        subs_id = request.GET.get('subs_id')
         if not subs_id:
             raise NotFoundError
 
